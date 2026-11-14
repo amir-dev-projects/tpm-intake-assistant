@@ -9,13 +9,13 @@ Support agents sort incoming tickets by hand, and it delays first replies. We wa
 **Needs more info.** 2 open items to close before triage.
 
 Top gaps:
-1. Security review: unknown, ask Wei Chen, Information Security.
+1. Security review: unknown, ask Amir F, Information Security.
 2. Security review: Sensitive or regulated data usually needs a security review. Confirm.
 
 ## Request
 
-- **Requester:** Priya Nair, Customer Support Operations
-- **Sponsor:** Marcus Webb, VP of Customer Operations
+- **Requester:** Masoud F, Customer Support Operations
+- **Sponsor:** Abbas, VP of Customer Operations
 - **Date submitted:** 2026-11-14
 
 ## Problem
@@ -46,7 +46,7 @@ Top gaps:
 ## People
 
 - **Users:** Support agents, and the two team leads who manage the queues.
-- **Approvers and consulted:** Marcus Webb for approval. Information Security and the support tooling team to be consulted.
+- **Approvers and consulted:** Abbas for approval. Information Security and the support tooling team to be consulted.
 - **Operators:** The support tooling team runs it after launch. Team leads review the accuracy report each week.
 
 ## Requirements
@@ -79,7 +79,7 @@ Top gaps:
 - **Deadline type:** Hard
 - **Date driver:** Our contract with the current ticketing vendor renews on 2027-03-31. We need to know the routing works before we sign for another year, because it affects which plan we choose.
 - **Budget:** Unknown
-- **Committed people:** Priya is the day-to-day contact. Two team leads will help test. One engineer from support tooling has been asked but has not confirmed.
+- **Committed people:** Masoud is the day-to-day contact. Two team leads will help test. One engineer from support tooling has been asked but has not confirmed.
 
 ## Risks and rollout
 
@@ -93,6 +93,6 @@ Top gaps:
 
 ## Open questions
 
-- Security review (ask Wei Chen, Information Security)
+- Security review (ask Amir F, Information Security)
 - Build or buy (ask Support tooling team lead)
-- Budget (ask Dana Okafor, Finance partner)
+- Budget (ask Dana O, Finance partner)
