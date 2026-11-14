@@ -23,13 +23,15 @@ I wanted requesters to do a first pass on their own, in a consistent format, so 
 
 ## How I use it
 
-1. I send the requester the link. It takes about 15 to 30 minutes. They don't need to prepare, and they can mark anything they don't know as "Unknown" and name someone who might.
-2. They send me the summary they get at the end.
-3. I read the readiness rating and the open questions first, then check the answers myself. I spot-check a number or two against real data.
-4. We have a short call to go through the gaps. I use it for what a form can't tell me: what's behind the deadline, what the sponsor actually cares about, and who will own it after launch.
-5. I send back a short written note with the agreed scope, open items, and next steps.
+I run it with the requester, and they don't have to touch the form:
 
-The form does the collecting. The judgment calls stay with me.
+1. We book a call, about 30 minutes. I explain what we're doing and why, and that "I don't know" is a fine answer.
+2. I share my screen and ask the questions in plain language. I type the answers in as we talk, so they can describe the request the way they'd explain it to a colleague.
+3. When an answer is vague, I ask for an example or a number and help them get to something clearer. When something is unknown, I write down who might know and take on finding out.
+4. At the end I read the summary back, and they tell me what I got wrong or missed.
+5. I send a short note with what we agreed, the open items I'm following up on, and when it goes to prioritization.
+
+I own the process and the follow-up. The requester only has to tell me about the problem.
 
 ## What the page does
 
