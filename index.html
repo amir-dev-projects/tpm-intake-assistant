@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Project request intake</title>
+<title>Amir's project request intake</title>
 <meta name="description" content="A guided project intake tool that assesses readiness and creates a structured TPM executive report. Runs entirely in the browser.">
 <style>
 :root{
@@ -129,7 +129,7 @@ footer{padding:0 0 36px;color:var(--muted);font-size:.88rem;max-width:70ch}
 <body>
 <div class="wrap">
   <header class="top">
-    <h1>Project request intake</h1>
+    <h1>Amir's project request intake</h1>
     <p>Work through the request one section at a time. Examples help clarify what useful answers look like; your progress is saved in this browser, and the final assessment separates blockers from follow-up items.</p>
   </header>
   <div class="layout">
@@ -140,7 +140,7 @@ footer{padding:0 0 36px;color:var(--muted);font-size:.88rem;max-width:70ch}
     </nav>
     <main id="main" tabindex="-1"><noscript>This page needs JavaScript.</noscript></main>
   </div>
-  <footer>This page runs in your browser. Nothing you type is sent anywhere. Answers are saved in this browser only, so they are still here if you refresh. Use Start over to clear them. Checks use simple pattern matching. Treat findings as prompts for human review, not automated approval or delivery authorization.</footer>
+  <footer>This page runs in your browser. Nothing you type is sent anywhere. Answers are saved in this browser only, so they are still here if you refresh. Use Start over to clear them. Checks use simple pattern matching. Decision-support content is generated from the answers entered and is intended to guide human review, not replace it or authorize delivery.</footer>
 </div>
 
 <script>
@@ -490,6 +490,130 @@ function buildAssessment(){
   if(!recommendations.length)recommendations.push("Confirm the appropriate triage participants and evaluate strategic fit, priority, capacity, dependencies, and delivery options.");
   return {status:status,cls:cls,reason:reason,blockers:blockers,gaps:gaps,suggestions:suggestions,recommendations:recommendations};
 }
+/* ---------- TPM decision support ---------- */
+function buildDecisionSupport(assessment){
+  const decisions=[],ownership=[],dependencies=[],questions=[],nextSteps=[];
+  const missing=id=>!val(id)||isUnk(val(id));
+  const askOwner=id=>{
+    const owner=val(id+"_owner");
+    return owner?owner:"Not identified";
+  };
+  function addDecision(title,owner,information,trigger){
+    decisions.push({title:title,owner:owner,information:information,trigger:trigger});
+  }
+  function addQuestion(group,question,reason){
+    questions.push({group:group,question:question,reason:reason});
+  }
+
+  if(missing("sponsor")){
+    addDecision("Identify the accountable business sponsor","Business leadership",
+      "A named sponsor who owns the outcome and can make or secure decisions.",
+      "The sponsor field is empty or marked unknown.");
+    addQuestion("Sponsor / business","Who is accountable for the business outcome and can make or secure the required decisions?",
+      "No accountable sponsor is identified in the intake.");
+  }
+  if(missing("outcome")||missing("metrics")){
+    addDecision("Agree the intended outcome and how success will be measured",
+      val("sponsor")&&!isUnk(val("sponsor"))?val("sponsor"):"Sponsor to be identified",
+      "A clear outcome and, where possible, a baseline, target, and measurement timeframe.",
+      "The desired outcome or success measure is missing or marked unknown.");
+    addQuestion("Sponsor / business","What measurable change should this initiative deliver, and how will we know it has worked?",
+      "The outcome or success measure needs clarification.");
+  }
+  if(missing("inscope")||missing("outscope")){
+    addDecision("Confirm the initiative boundaries","Sponsor with delivery / product leads",
+      "Agreement on what is included and explicitly excluded.",
+      "Scope or out-of-scope information is missing or marked unknown.");
+    addQuestion("Sponsor / product","What is included in the first delivery, and what is explicitly excluded?",
+      "The intake does not establish both sides of the scope boundary.");
+  }
+  if(missing("approvers")){
+    ownership.push({role:"Approvers and consulted stakeholders",status:"Not identified",
+      detail:"The intake does not name who must approve the work or be consulted.",
+      followup:"Ask the sponsor to identify decision-makers and required stakeholders."});
+    addQuestion("Sponsor / delivery","Who needs to approve this initiative, and which teams must be consulted?",
+      "Approvers and consulted stakeholders are not identified.");
+  }
+  if(missing("operators")){
+    ownership.push({role:"Operational owner",status:"Not identified",
+      detail:"No team or person is named to operate and support the outcome after launch.",
+      followup:"Confirm the receiving operational or support team before delivery planning."});
+    addQuestion("Operations / support","Which team will own day-to-day operation, support, and ongoing maintenance after launch?",
+      "The post-launch operational owner is not identified.");
+  }
+  if(missing("people")){
+    ownership.push({role:"Delivery capacity",status:"Not confirmed",
+      detail:"The intake does not identify people or teams committed to the work.",
+      followup:"Confirm which teams can contribute and whether capacity is actually available."});
+    addQuestion("Sponsor / functional leads","Which people or teams are committed, and has their capacity been confirmed?",
+      "Committed delivery resources are not identified.");
+  }
+  if(missing("deps")){
+    dependencies.push({status:"Not confirmed",
+      detail:"No cross-team or project dependencies are recorded.",
+      followup:"Confirm whether there are dependencies; if none exist, record that explicitly."});
+    addQuestion("Engineering / delivery","Which teams, systems, projects, or external parties must deliver something before this work can proceed?",
+      "The dependency field is empty or marked unknown.");
+  }else{
+    dependencies.push({status:isUnk(val("deps"))?"Unknown":"Requester-provided",
+      detail:val("deps"),
+      followup:"Validate each dependency with the named owning team, including its deliverable and required date."});
+    if(!isUnk(val("deps"))){
+      addQuestion("Engineering / delivery","Have the listed dependencies been validated with each owning team, including deliverables and required dates?",
+        "Dependencies were listed by the requester and should be confirmed with the teams involved.");
+    }
+  }
+  if(missing("integrations")&&missing("systems")){
+    dependencies.push({status:"Technical touchpoints not identified",
+      detail:"No affected systems or integrations are recorded.",
+      followup:"Ask engineering to identify systems, interfaces, data flows, and technical owners."});
+    addQuestion("Engineering / architecture","Which systems, interfaces, and data flows will be affected, and who owns each one?",
+      "Technical touchpoints are not identified.");
+  }
+  if(missing("secReview")||["Unknown","Not needed"].includes(val("secReview"))){
+    if(val("dataClass")==="Confidential"||val("dataClass")==="Restricted"||val("regulated")==="Yes"){
+      addDecision("Confirm the security review approach","Security / privacy, with the sponsor",
+        "A confirmed review outcome or an agreed review plan and accountable reviewer.",
+        "The intake indicates sensitive or regulated data, but the security review is not confirmed.");
+      addQuestion("Security / privacy","What security and privacy reviews are required, who owns them, and when must they be completed?",
+        "The data classification or regulated-data answer indicates a review may be needed.");
+    }
+  }
+  if(missing("deadlineType")||missing("driver")){
+    addDecision("Validate the target date and its business driver","Sponsor with delivery lead",
+      "Whether the date is hard or soft, what drives it, and the consequence of missing it.",
+      "The deadline type or date driver is not established.");
+    addQuestion("Sponsor / delivery","What drives the target date, how firm is it, and what is the consequence of missing it?",
+      "The date constraint needs validation.");
+  }
+  if(val("risks")&& !isUnk(val("risks"))){
+    addQuestion("Delivery / engineering","Who owns each listed risk, and what evidence or action will reduce its likelihood or impact?",
+      "Risks were provided but ownership and mitigation may need confirmation.");
+  }else{
+    addQuestion("Delivery / engineering","What could prevent delivery or adoption, and who would own the response?",
+      "No specific risks are recorded in the intake.");
+  }
+  if(assessment.blockers.length){
+    nextSteps.push("Resolve the intake blockers first: identify the core problem and accountable sponsor.");
+  }
+  if(assessment.gaps.length){
+    nextSteps.push("Review the important gaps with the requester and relevant stakeholders; assign an owner and target date to each agreed action.");
+  }
+  if(ownership.length){
+    nextSteps.push("Confirm accountable business, delivery, and operational owners before committing to a delivery approach.");
+  }
+  if(dependencies.some(x=>x.status!=="Requester-provided")){
+    nextSteps.push("Validate technical and cross-team dependencies, including owners, required inputs, and timing.");
+  }
+  if(missing("secReview")||["Unknown","Not needed"].includes(val("secReview"))){
+    nextSteps.push("Confirm whether security, privacy, and compliance reviews are required and identify the responsible reviewers.");
+  }
+  if(!nextSteps.length){
+    nextSteps.push("Bring the sponsor and relevant delivery, technical, security, and operational stakeholders together to validate assumptions, dependencies, capacity, and the proposed next decision.");
+  }
+  return {decisions:decisions,ownership:ownership,dependencies:dependencies,questions:questions,nextSteps:nextSteps};
+}
+
 function reportDate(){
   const d=new Date();
   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
@@ -500,6 +624,7 @@ function provided(id,label){
 }
 function buildModel(){
   const assessment=buildAssessment();
+  const decisionSupport=buildDecisionSupport(assessment);
   const sections=STEPS.map(s=>({
     h:s.title==="Request basics"?"Request":s.title,
     items:s.fields.filter(f=>!f.header).map(f=>[f.name,val(f.id)])
@@ -572,7 +697,24 @@ function toMarkdown(m){
     m.decisionItems.forEach((x,i)=>L.push((i+1)+". **"+x.type+":** "+x.text));
   }else L.push("- No blockers or important gaps identified by the current checks.");
   L.push("","## Recommended next steps","");
-  m.recommendations.forEach((x,i)=>L.push((i+1)+". "+x));
+  m.recommendations.concat(m.decisionSupport.nextSteps).forEach((x,i)=>L.push((i+1)+". "+x));
+  L.push("","## Decisions requiring attention","");
+  if(m.decisionSupport.decisions.length){
+    m.decisionSupport.decisions.forEach((x,i)=>{
+      L.push((i+1)+". **"+x.title+"**");
+      L.push("   - **Suggested decision owner:** "+x.owner);
+      L.push("   - **Information needed:** "+x.information);
+      L.push("   - **Why this is flagged:** "+x.trigger);
+    });
+  }else L.push("- No specific decision gaps were identified by the current checks.");
+  L.push("","## Ownership gaps","");
+  if(m.decisionSupport.ownership.length){
+    m.decisionSupport.ownership.forEach((x,i)=>L.push((i+1)+". **"+x.role+" — "+x.status+"**: "+x.detail+" Follow-up: "+x.followup));
+  }else L.push("- No ownership gaps were identified by the current checks. Confirm ownership with stakeholders.");
+  L.push("","## Dependencies to validate","");
+  m.decisionSupport.dependencies.forEach((x,i)=>L.push((i+1)+". **"+x.status+":** "+x.detail+" Follow-up: "+x.followup));
+  L.push("","## Stakeholder discussion questions","");
+  m.decisionSupport.questions.forEach((x,i)=>L.push((i+1)+". **"+x.group+":** "+x.question+" ("+x.reason+")"));
   const reportGroups=[
     {title:"Scope and outcomes",steps:["Scope","Value and success"]},
     {title:"People and ownership",steps:["People"]},
@@ -681,7 +823,44 @@ function renderSummary(){
     ),
     el("section",{class:"report-section"},
       el("h3",{text:"Recommended next steps"}),
-      el("ol",{class:"report-list"},m.recommendations.map(x=>el("li",{text:x})))
+      el("ol",{class:"report-list"},m.recommendations.concat(m.decisionSupport.nextSteps).map(x=>el("li",{text:x})))
+    ),
+    el("section",{class:"report-section"},
+      el("h3",{text:"Decisions requiring attention"}),
+      m.decisionSupport.decisions.length
+        ?el("ol",{class:"report-list"},m.decisionSupport.decisions.map(x=>el("li",{},
+          el("strong",{text:x.title}),
+          el("p",{text:"Suggested decision owner: "+x.owner}),
+          el("p",{text:"Information needed: "+x.information}),
+          el("p",{class:"report-empty",text:"Why this is flagged: "+x.trigger})
+        )))
+        :el("p",{class:"report-empty",text:"No specific decision gaps were identified by the current checks. Stakeholder review may still identify decisions."})
+    ),
+    el("section",{class:"report-section"},
+      el("h3",{text:"Ownership gaps"}),
+      m.decisionSupport.ownership.length
+        ?el("ol",{class:"report-list"},m.decisionSupport.ownership.map(x=>el("li",{},
+          el("strong",{text:x.role+" — "+x.status}),
+          el("p",{text:x.detail}),
+          el("p",{class:"report-empty",text:"Follow-up: "+x.followup})
+        )))
+        :el("p",{class:"report-empty",text:"No ownership gaps were identified by the current checks. Confirm ownership with stakeholders."})
+    ),
+    el("section",{class:"report-section"},
+      el("h3",{text:"Dependencies to validate"}),
+      el("ol",{class:"report-list"},m.decisionSupport.dependencies.map(x=>el("li",{},
+        el("strong",{text:x.status}),
+        el("p",{text:x.detail}),
+        el("p",{class:"report-empty",text:"Follow-up: "+x.followup})
+      )))
+    ),
+    el("section",{class:"report-section"},
+      el("h3",{text:"Stakeholder discussion questions"}),
+      el("p",{class:"hint",text:"Use these questions to guide discussion. They are generated from missing, unknown, or requester-provided information and are not evidence that an issue exists."}),
+      el("ol",{class:"report-list"},m.decisionSupport.questions.map(x=>el("li",{},
+        el("strong",{text:x.group+": "}),x.question,
+        el("p",{class:"report-empty",text:"Reason: "+x.reason})
+      )))
     )
   );
   const reportGroups=[
