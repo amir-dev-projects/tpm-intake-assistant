@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Amir's project request intake</title>
+<title>Project request intake</title>
 <meta name="description" content="A guided intake form that flags vague answers and builds a requirements summary with a readiness rating. Runs entirely in the browser.">
 <style>
 :root{
@@ -47,7 +47,17 @@ main{background:var(--surface);border:1px solid var(--line);border-radius:6px;pa
 .bar{height:4px;background:var(--line);border-radius:2px;margin:0 0 22px;overflow:hidden}
 .bar span{display:block;height:100%;background:var(--accent)}
 h2{font:600 1.55rem/1.2 var(--serif);margin:0 0 6px}
-.intro{margin:0 0 26px;color:var(--muted);max-width:62ch}
+.intro{margin:0 0 20px;color:var(--muted);max-width:62ch}
+.progress-summary{margin:0 0 24px;padding:12px 14px;background:var(--bg);border:1px solid var(--line);border-radius:4px}
+.progress-copy{display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin:0 0 7px;font-size:.9rem}
+.progress-copy strong{font-weight:650}
+.progress-track{height:6px;background:var(--line);border-radius:99px;overflow:hidden}
+.progress-track span{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .18s ease}
+.section-progress{margin:7px 0 0;color:var(--muted);font-size:.85rem}
+.example{margin:6px 0 0;color:var(--muted);font-size:.88rem;max-width:66ch}
+.example strong{color:var(--ink);font-weight:600}
+.nav-status{margin-left:auto;color:var(--muted);font-size:.72rem;white-space:nowrap}
+nav.steps li.done .nav-status{color:var(--ok)}
 .field{margin:0 0 22px}
 .field label{display:block;font-weight:600;margin:0 0 3px}
 .field label .opt{font-weight:400;color:var(--muted)}
@@ -102,8 +112,8 @@ footer{padding:0 0 36px;color:var(--muted);font-size:.88rem;max-width:70ch}
 <body>
 <div class="wrap">
   <header class="top">
-    <h1>Amir's project request intake</h1>
-    <p>Answer a few questions at a time. The page flags vague answers as you go, then builds an intake assessment with blockers, important gaps, suggestions, and recommended next steps.</p>
+    <h1>Project request intake</h1>
+    <p>Work through the request one section at a time. Examples help clarify what useful answers look like; your progress is saved in this browser, and the final assessment separates blockers from follow-up items.</p>
   </header>
   <div class="layout">
     <nav class="steps" id="nav" aria-label="Steps">
@@ -131,20 +141,20 @@ const STEPS=[
   {id:"summary",name:"Summary",label:"One-sentence summary",type:"textarea",rows:2,required:true,header:true,checks:["vague","short"]}
  ]},
  {title:"Problem",intro:"Describe what is wrong or missing today.",fields:[
-  {id:"problem",name:"Problem",label:"What problem are you trying to solve?",type:"textarea",required:true,hint:"Describe the problem, not the fix.",checks:["solution","vague","short"]},
-  {id:"affected",name:"Who is affected",label:"Who feels this problem, and how many people?",type:"textarea",required:true,checks:["vague"]},
+  {id:"problem",name:"Problem",label:"What problem are you trying to solve?",type:"textarea",required:true,hint:"Describe the problem, not the fix.",example:"Support teams spend 6 hours each week manually reconciling duplicate customer records, delaying case resolution.",checks:["solution","vague","short"]},
+  {id:"affected",name:"Who is affected",label:"Who feels this problem, and how many people?",type:"textarea",required:true,example:"About 45 support agents across the Vancouver and Toronto teams; customers experience longer wait times.",checks:["vague"]},
   {id:"today",name:"Handled today",label:"How is it handled today?",type:"textarea"},
   {id:"evidence",name:"Evidence",label:"What evidence do you have?",type:"textarea",hint:"Incidents, tickets, customer complaints, metrics, audit findings."}
  ]},
  {title:"Value and success",intro:"What changes if this works, and how you would know.",fields:[
   {id:"outcome",name:"Desired outcome",label:"What should be different when this is done?",type:"textarea",required:true,checks:["vague","short"]},
-  {id:"metrics",name:"Success metrics",label:"How will you measure success?",type:"textarea",required:true,hint:"Give a baseline and a target, such as “40 minutes today, 10 minutes by Q3”.",checks:["metric","vague"]},
+  {id:"metrics",name:"Success metrics",label:"How will you measure success?",type:"textarea",required:true,hint:"Give a baseline and a target, such as “40 minutes today, 10 minutes by Q3”.",example:"Reduce average case handling time from 40 minutes to 25 minutes within 90 days of launch.",checks:["metric","vague"]},
   {id:"inaction",name:"Cost of inaction",label:"What happens if nothing is done?",type:"textarea",checks:["vague"]},
   {id:"goals",name:"Linked goal",label:"Which team or company goal does this support?",type:"text"}
  ]},
  {title:"Scope",intro:"What is included, what is not, and what done means.",fields:[
-  {id:"inscope",name:"In scope",label:"What is in scope?",type:"textarea",required:true,checks:["vague"]},
-  {id:"outscope",name:"Out of scope",label:"What is explicitly out of scope?",type:"textarea",required:true},
+  {id:"inscope",name:"In scope",label:"What is in scope?",type:"textarea",required:true,example:"Automate duplicate detection, provide a review queue, and integrate with the existing CRM.",checks:["vague"]},
+  {id:"outscope",name:"Out of scope",label:"What is explicitly out of scope?",type:"textarea",required:true,example:"Replacing the CRM, changing customer identity policies, or migrating historical records."},
   {id:"done",name:"Definition of done",label:"What does done look like?",type:"textarea"},
   {id:"mvp",name:"First phase",label:"Is there a smaller first phase?",type:"textarea"}
  ]},
@@ -166,18 +176,18 @@ const STEPS=[
  ]},
  {title:"Technical context",intro:"What it touches and what it depends on.",fields:[
   {id:"systems",name:"Systems affected",label:"Systems and platforms affected",type:"textarea"},
-  {id:"deps",name:"Dependencies",label:"Dependencies on other teams or projects",type:"textarea"},
+  {id:"deps",name:"Dependencies",label:"Dependencies on other teams or projects",type:"textarea",example:"CRM API access from the Platform team; security review from Information Security; test data from Operations."},
   {id:"buyBuild",name:"Build or buy",label:"Build, buy, or no preference?",type:"select",options:["Build","Buy","No preference","Unknown"]}
  ]},
  {title:"Timeline and resources",intro:"When it is needed, why, and who is available.",fields:[
   {id:"targetDate",name:"Target date",label:"Target date",type:"text",required:true,placeholder:"2027-03-31 or Q2 2027"},
   {id:"deadlineType",name:"Deadline type",label:"Is the date hard or soft?",type:"select",options:["Hard","Soft","Unknown"]},
-  {id:"driver",name:"Date driver",label:"What is driving the date?",type:"textarea",required:true,hint:"A contract, launch, regulation, event, or budget cycle.",checks:["vague"]},
+  {id:"driver",name:"Date driver",label:"What is driving the date?",type:"textarea",required:true,hint:"A contract, launch, regulation, event, or budget cycle.",example:"A customer contract renewal on 30 June requires the new workflow to be operational by 1 June.",checks:["vague"]},
   {id:"budget",name:"Budget",label:"Funding source or budget range",type:"text"},
   {id:"people",name:"Committed people",label:"People or teams already committed",type:"textarea"}
  ]},
  {title:"Risks and rollout",intro:"What could go wrong, and how it reaches users.",fields:[
-  {id:"risks",name:"Risks",label:"Known risks",type:"textarea"},
+  {id:"risks",name:"Risks",label:"Known risks",type:"textarea",example:"The CRM API may not support the required event volume; mitigation is to validate throughput during technical discovery."},
   {id:"assumptions",name:"Assumptions",label:"Assumptions this request depends on",type:"textarea"},
   {id:"constraints",name:"Constraints",label:"Constraints or blockers",type:"textarea"},
   {id:"rollout",name:"Rollout and adoption",label:"Training, communications, migration, and support needs",type:"textarea"},
@@ -272,16 +282,41 @@ STEPS.concat([{title:"Assessment"}]).forEach((s,i)=>{
   const b=el("button",{type:"button",class:"item",onclick:()=>{go(i);$("#nav").classList.remove("open");$("#jump").setAttribute("aria-expanded","false");}},
     el("span",{class:"n",text:String(i+1)}),el("span",{text:s.title}));
   const li=el("li",{},b);
-  stepsEl.append(li);navItems.push({li:li,b:b});
+  stepsEl.append(li);navItems.push({li:li,b:b,status:status});
 });
 function stepDone(i){
   const s=STEPS[i],req=s.fields.filter(f=>f.required);
   return req.length?req.every(f=>val(f.id)):s.fields.some(f=>val(f.id));
 }
+function stepCounts(i){
+  const req=STEPS[i].fields.filter(f=>f.required);
+  return {done:req.filter(f=>!!val(f.id)).length,total:req.length};
+}
+function overallCounts(){
+  const req=ALL.filter(f=>f.required);
+  return {done:req.filter(f=>!!val(f.id)).length,total:req.length};
+}
+function updateProgress(){
+  const overall=overallCounts(),overallText=$("#overall-progress-text"),overallFill=$("#overall-progress-fill");
+  if(overallText)overallText.textContent=overall.done+" of "+overall.total+" required questions addressed";
+  if(overallFill)overallFill.style.width=(overall.total?Math.round(overall.done/overall.total*100):0)+"%";
+  const section=stepCounts(state.step),sectionText=$("#section-progress");
+  if(sectionText){
+    sectionText.textContent=section.total
+      ? section.done+" of "+section.total+" required questions addressed in this section"
+      : "No required questions in this section. Add information where it is available.";
+  }
+}
 function refreshNav(){
   navItems.forEach((n,i)=>{
     n.li.classList.toggle("current",i===state.step);
     n.li.classList.toggle("done",i<N&&stepDone(i));
+    if(i<N){
+      const counts=stepCounts(i);
+      n.status.textContent=counts.total
+        ? (stepDone(i)?"Complete":(counts.done?"In progress":"Not started"))
+        : (STEPS[i].fields.some(f=>val(f.id))?"Started":"Optional");
+    }else n.status.textContent="";
     if(i===state.step)n.b.setAttribute("aria-current","step");else n.b.removeAttribute("aria-current");
   });
 }
@@ -328,7 +363,7 @@ function fieldEl(f){
   const sync=()=>{owner.hidden=!isUnk(val(f.id));};
   sync();
 
-  const onChange=()=>{state.answers[f.id]=input.value;save();sync();refreshNav();repaintShown();};
+  const onChange=()=>{state.answers[f.id]=input.value;save();sync();refreshNav();updateProgress();repaintShown();};
   input.addEventListener("input",onChange);
   input.addEventListener("change",onChange);
   input.addEventListener("blur",()=>paintFlags(f));
@@ -360,6 +395,7 @@ function renderStep(){
       el("button",{type:"button",class:"btn secondary",text:"Back",disabled:i===0,onclick:()=>go(i-1)}),
       nextBtn)
   );
+  updateProgress();
   if(showEmpty.has(i))s.fields.forEach(paintFlags);
 }
 function next(){
