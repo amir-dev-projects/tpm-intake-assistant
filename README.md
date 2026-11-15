@@ -1,4 +1,14 @@
-# TPM Intake Assistant
+<p align="center">
+  <img src="assets/af-logo.png" alt="AF monogram logo" width="112">
+</p>
+
+<h1 align="center">TPM Intake Assistant</h1>
+
+<p align="center"><strong>AMIR FATEMI</strong><br>TECHNOLOGY • PRODUCT • DELIVERY</p>
+
+<p align="center">A practical tool for better project intake, assessment and delivery decisions.</p>
+
+---
 
 I built the TPM Intake Assistant to make the early stage of project
 intake more structured and useful. It helps me understand a project
@@ -320,3 +330,12 @@ them as results or benefits already achieved.
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
+
+
+## Technical documentation
+
+For the implementation details, application structure, assessment rules, decision-support logic, and report generation, see [Technical Documentation](TECHNICAL-README.md).
+
+---
+
+**TPM Intake Assistant by Amir Fatemi © 2026**
