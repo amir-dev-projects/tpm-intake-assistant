@@ -224,7 +224,7 @@ const showEmpty=new Set();
 try{
   const raw=localStorage.getItem(KEY);
   if(raw){const s=JSON.parse(raw);
-    if(s&&s.answers){state.answers=Object.assign({date:today},s.answers);state.step=Math.min(Math.max(+s.step||0,0),N);}}
+    if(s&&s.answers){state.answers=Object.assign({date:today},s.answers);state.step=Math.min(Math.max(+s.step||0,0),N+1);}}
 }catch(e){}
 function save(){try{localStorage.setItem(KEY,JSON.stringify({answers:state.answers,step:state.step}));}catch(e){}}
 
@@ -295,7 +295,7 @@ function stepFlags(i,includeEmpty){
 /* ---------- Navigation ---------- */
 const stepsEl=$("#steps");
 const navItems=[];
-STEPS.concat([{title:"Assessment"}]).forEach((s,i)=>{
+STEPS.concat([{title:"Assessment"},{title:"Report & Downloads"}]).forEach((s,i)=>{
   const status=el("span",{class:"nav-status",text:"Not started"});
   const b=el("button",{type:"button",class:"item",onclick:()=>{go(i);$("#nav").classList.remove("open");$("#jump").setAttribute("aria-expanded","false");}},
     el("span",{class:"n",text:String(i+1)}),el("span",{text:s.title}),status);
@@ -334,7 +334,11 @@ function refreshNav(){
       n.status.textContent=counts.total
         ? (stepDone(i)?"Complete":(counts.done?"In progress":"Not started"))
         : (STEPS[i].fields.some(f=>val(f.id))?"Started":"Optional");
-    }else n.status.textContent="";
+    }else if(i===N){
+      n.status.textContent="Review";
+    }else{
+      n.status.textContent="Export";
+    }
     if(i===state.step)n.b.setAttribute("aria-current","step");else n.b.removeAttribute("aria-current");
   });
 }
@@ -661,7 +665,7 @@ function buildModel(){
     blockers:assessment.blockers,gaps:assessment.gaps,
     suggestions:assessment.suggestions,recommendations:assessment.recommendations,
     decisionItems:decisionItems,executiveFacts:executiveFacts,
-    sections:sections,open:open
+    sections:sections,open:open,decisionSupport:decisionSupport
   };
 }
 function toMarkdown(m){
@@ -858,6 +862,47 @@ function reportFindingSection(title,items,emptyText){
       el("p",{class:"report-empty",text:emptyText})
   );
 }
+function renderAssessment(){
+  const m=buildModel();
+  const summary=el("section",{class:"report-panel"},
+    el("h3",{text:"Assessment overview"}),
+    el("p",{text:m.reason}),
+    el("div",{class:"report-grid"},
+      reportStat("Blockers",String(m.blockers.length)),
+      reportStat("Important gaps",String(m.gaps.length)),
+      reportStat("Suggestions",String(m.suggestions.length)),
+      reportStat("Decisions to review",String(m.decisionSupport.decisions.length))
+    )
+  );
+  main.append(
+    el("p",{class:"meta",text:"STEP 11 OF 12"}),
+    el("div",{class:"bar"},el("span",{style:"width:91.7%"})),
+    el("div",{class:"verdict "+m.cls},
+      el("p",{class:"label",text:"Intake assessment"}),
+      el("h2",{text:m.status}),
+      el("p",{text:m.reason})
+    ),
+    summary,
+    reportFindingSection("Blockers",m.blockers,"No critical blockers identified by the current checks."),
+    reportFindingSection("Important gaps",m.gaps,"No important gaps identified by the current checks."),
+    reportFindingSection("Suggestions",m.suggestions,"No additional suggestions identified."),
+    el("section",{class:"report-section"},
+      el("h3",{text:"Decisions and clarifications required"}),
+      m.decisionItems.length
+        ?el("ol",{class:"report-list"},m.decisionItems.map(x=>el("li",{},el("strong",{text:x.type+": "}),x.text)))
+        :el("p",{class:"report-empty",text:"No blockers or important gaps identified by the current checks. Stakeholder review may still be required."})
+    ),
+    el("section",{class:"report-section"},
+      el("h3",{text:"Recommended next steps"}),
+      el("ol",{class:"report-list"},m.recommendations.concat(m.decisionSupport.nextSteps).map(x=>el("li",{text:x})))
+    ),
+    el("div",{class:"actions"},
+      el("button",{type:"button",class:"btn secondary",text:"Back to intake",onclick:()=>go(N-1)}),
+      el("button",{type:"button",class:"btn",text:"Continue to Report & Downloads",onclick:()=>go(N+1)})
+    )
+  );
+}
+
 function renderSummary(){
   const m=buildModel();
   const copyBtn=el("button",{type:"button",class:"btn",text:"Copy executive report"});
@@ -977,12 +1022,10 @@ function renderSummary(){
     el("p",{class:"report-note",text:"Assessment limitation: Findings are generated from the answers entered and transparent rule-based checks. They do not replace stakeholder review, technical discovery, security assessment, financial approval, or portfolio prioritization."})
   );
   main.append(
-    el("div",{class:"verdict "+m.cls},
-      el("p",{class:"label",text:"Intake assessment"}),
-      el("h2",{text:m.status}),
-      el("p",{text:m.reason})
-    ),
+    el("p",{class:"meta",text:"STEP 12 OF 12 · REPORT & DOWNLOADS"}),
+    el("div",{class:"bar"},el("span",{style:"width:100%"})),
     el("div",{class:"toolbar"},
+      el("button",{type:"button",class:"btn secondary",text:"Back to Assessment",onclick:()=>go(N)}),
       copyBtn,
       el("button",{type:"button",class:"btn secondary",text:"Download report (.md)",onclick:()=>download(m)}),
       el("button",{type:"button",class:"btn secondary",text:"Download report (.docx)",onclick:()=>downloadDocx(m)}),
@@ -997,7 +1040,9 @@ function renderSummary(){
 function render(){
   refreshNav();
   main.replaceChildren();
-  if(state.step>=N)renderSummary();else renderStep();
+  if(state.step<N)renderStep();
+  else if(state.step===N)renderAssessment();
+  else renderSummary();
 }
 render();
 })();
