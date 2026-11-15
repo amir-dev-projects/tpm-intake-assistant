@@ -1,4 +1,12 @@
-# TPM Intake Assistant — Technical Notes
+<p align="center">
+  <img src="assets/af-logo.png" alt="AF monogram logo" width="88">
+</p>
+
+<h1 align="center">TPM Intake Assistant — Technical Notes</h1>
+
+<p align="center"><strong>AMIR FATEMI</strong> · TECHNOLOGY • PRODUCT • DELIVERY</p>
+
+---
 
 I wrote this document to explain how I built the TPM Intake Assistant,
 how the different pages work, and how I made the assessment and
@@ -803,3 +811,8 @@ the user, and produce a report that can support a real discussion.
 
 I expect to keep improving the questions and rules as I use the
 application and learn where the intake process can be clearer.
+
+
+---
+
+**TPM Intake Assistant by Amir Fatemi © 2026**
