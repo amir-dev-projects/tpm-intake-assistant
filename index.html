@@ -757,6 +757,86 @@ function download(m){
   document.body.append(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+function xmlEscape(value){
+  return String(value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;");
+}
+function markdownRuns(text){
+  const runs=[];
+  const re=/\*\*(.+?)\*\*/g;
+  let last=0,match;
+  while((match=re.exec(text))){
+    if(match.index>last)runs.push('<w:r><w:t xml:space="preserve">'+xmlEscape(text.slice(last,match.index))+'</w:t></w:r>');
+    runs.push('<w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">'+xmlEscape(match[1])+'</w:t></w:r>');
+    last=re.lastIndex;
+  }
+  if(last<text.length)runs.push('<w:r><w:t xml:space="preserve">'+xmlEscape(text.slice(last))+'</w:t></w:r>');
+  return runs.join("");
+}
+function markdownToWordXml(markdown){
+  const paragraphs=[];
+  markdown.split(/\r?\n/).forEach(line=>{
+    if(!line.trim()||line.trim()==="---")return;
+    let text=line,style="Normal",prefix="";
+    if(/^###\s/.test(line)){style="Heading2";text=line.replace(/^###\s*/,"");}
+    else if(/^##\s/.test(line)){style="Heading1";text=line.replace(/^##\s*/,"");}
+    else if(/^#\s/.test(line)){style="Title";text=line.replace(/^#\s*/,"");}
+    else if(/^>\s?/.test(line)){style="Quote";text=line.replace(/^>\s?/,"");}
+    else if(/^\s*[-*]\s+/.test(line)){style="ListParagraph";text="•  "+line.replace(/^\s*[-*]\s+/,"");}
+    else if(/^\s*\d+\.\s+/.test(line)){style="ListParagraph";text=line.replace(/^\s*/,"");}
+    paragraphs.push('<w:p><w:pPr><w:pStyle w:val="'+style+'"/></w:pPr>'+markdownRuns(text)+'</w:p>');
+  });
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+paragraphs.join("")+ 
+    '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1080" w:right="1080" w:bottom="1080" w:left="1080" w:header="540" w:footer="540" w:gutter="0"/></w:sectPr></w:body></w:document>';
+}
+function makeStoredZip(files){
+  const encoder=new TextEncoder(),local=[],central=[];
+  let offset=0;
+  const crcTable=makeCrcTable();
+  function crc32(bytes){let c=0xffffffff;for(let i=0;i<bytes.length;i++)c=crcTable[(c^bytes[i])&255]^(c>>>8);return (c^0xffffffff)>>>0;}
+  function u16(n){return new Uint8Array([n&255,(n>>>8)&255]);}
+  function u32(n){return new Uint8Array([n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255]);}
+  function join(parts){const size=parts.reduce((n,a)=>n+a.length,0),out=new Uint8Array(size);let at=0;parts.forEach(a=>{out.set(a,at);at+=a.length;});return out;}
+  files.forEach(file=>{
+    const name=encoder.encode(file.name),data=encoder.encode(file.content),crc=crc32(data);
+    const header=join([u32(0x04034b50),u16(20),u16(0x0800),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),name]);
+    local.push(header,data);
+    const c=join([u32(0x02014b50),u16(20),u16(20),u16(0x0800),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(offset),name]);
+    central.push(c);offset+=header.length+data.length;
+  });
+  const centralBytes=join(central),localBytes=join(local);
+  const end=join([u32(0x06054b50),u16(0),u16(0),u16(files.length),u16(files.length),u32(centralBytes.length),u32(localBytes.length),u16(0)]);
+  return join([localBytes,centralBytes,end]);
+}
+function makeCrcTable(){
+  const table=new Uint32Array(256);
+  for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?(0xedb88320^(c>>>1)):(c>>>1);table[n]=c>>>0;}
+  return table;
+}
+function downloadDocx(m){
+  const title=xmlEscape(m.title);
+  const documentXml=markdownToWordXml(toMarkdown(m));
+  const styles='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'+
+    '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr><w:pPr><w:spacing w:after="120" w:line="276" w:lineRule="auto"/></w:pPr></w:style>'+
+    '<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:rPr><w:b/><w:sz w:val="36"/><w:color w:val="1D5F6B"/></w:rPr><w:pPr><w:spacing w:before="0" w:after="240"/></w:pPr></w:style>'+
+    '<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:rPr><w:b/><w:sz w:val="28"/><w:color w:val="1D5F6B"/></w:rPr><w:pPr><w:keepNext/><w:spacing w:before="300" w:after="120"/></w:pPr></w:style>'+
+    '<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:rPr><w:b/><w:sz w:val="24"/></w:rPr><w:pPr><w:keepNext/><w:spacing w:before="200" w:after="80"/></w:pPr></w:style>'+
+    '<w:style w:type="paragraph" w:styleId="Quote"><w:name w:val="Quote"/><w:basedOn w:val="Normal"/><w:rPr><w:i/><w:color w:val="566872"/></w:rPr><w:pPr><w:ind w:left="360"/><w:spacing w:after="180"/></w:pPr></w:style>'+
+    '<w:style w:type="paragraph" w:styleId="ListParagraph"><w:name w:val="List Paragraph"/><w:basedOn w:val="Normal"/><w:pPr><w:ind w:left="360"/><w:spacing w:after="80"/></w:pPr></w:style></w:styles>';
+  const files=[
+    {name:"[Content_Types].xml",content:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>'},
+    {name:"_rels/.rels",content:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'},
+    {name:"word/document.xml",content:documentXml},
+    {name:"word/styles.xml",content:styles},
+    {name:"word/_rels/document.xml.rels",content:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'}
+  ];
+  const zip=makeStoredZip(files),slug=m.title.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"request";
+  const url=URL.createObjectURL(new Blob([zip],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}));
+  const a=el("a",{href:url,download:"intake-"+slug+".docx"});document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+
 function reportStat(label,value){
   return el("div",{class:"report-stat"},
     el("span",{class:"k",text:label}),
@@ -905,6 +985,7 @@ function renderSummary(){
     el("div",{class:"toolbar"},
       copyBtn,
       el("button",{type:"button",class:"btn secondary",text:"Download report (.md)",onclick:()=>download(m)}),
+      el("button",{type:"button",class:"btn secondary",text:"Download report (.docx)",onclick:()=>downloadDocx(m)}),
       el("button",{type:"button",class:"btn secondary",text:"Edit answers",onclick:()=>go(0)}),
       el("button",{type:"button",class:"btn secondary",text:"Print report",onclick:()=>window.print()})
     ),
