@@ -103,7 +103,7 @@ footer{padding:0 0 36px;color:var(--muted);font-size:.88rem;max-width:70ch}
 <div class="wrap">
   <header class="top">
     <h1>Amir's project request intake</h1>
-    <p>Answer a few questions at a time. The page flags vague answers as you go, then builds an intake summary with a readiness rating you can copy or download.</p>
+    <p>Answer a few questions at a time. The page flags vague answers as you go, then builds an intake assessment with blockers, important gaps, suggestions, and recommended next steps.</p>
   </header>
   <div class="layout">
     <nav class="steps" id="nav" aria-label="Steps">
@@ -113,7 +113,7 @@ footer{padding:0 0 36px;color:var(--muted);font-size:.88rem;max-width:70ch}
     </nav>
     <main id="main" tabindex="-1"><noscript>This page needs JavaScript.</noscript></main>
   </div>
-  <footer>This page runs in your browser. Nothing you type is sent anywhere. Answers are saved in this browser only, so they are still here if you refresh. Use Start over to clear them. Flags come from simple pattern checks, so treat them as prompts, not judgments.</footer>
+  <footer>This page runs in your browser. Nothing you type is sent anywhere. Answers are saved in this browser only, so they are still here if you refresh. Use Start over to clear them. Checks use simple pattern matching. Treat findings as prompts for human review, not automated approval or delivery authorization.</footer>
 </div>
 
 <script>
@@ -187,7 +187,8 @@ const STEPS=[
 
 /* ---------- Setup ---------- */
 const KEY="tpm-intake-v1";
-const today=new Date().toISOString().slice(0,10);
+const now=new Date();
+const today=[now.getFullYear(),String(now.getMonth()+1).padStart(2,"0"),String(now.getDate()).padStart(2,"0")].join("-");
 const N=STEPS.length;
 const ALL=[];
 STEPS.forEach((s,i)=>s.fields.forEach(f=>{f.stepIndex=i;ALL.push(f);}));
@@ -267,7 +268,7 @@ function stepFlags(i,includeEmpty){
 /* ---------- Navigation ---------- */
 const stepsEl=$("#steps");
 const navItems=[];
-STEPS.concat([{title:"Summary"}]).forEach((s,i)=>{
+STEPS.concat([{title:"Assessment"}]).forEach((s,i)=>{
   const b=el("button",{type:"button",class:"item",onclick:()=>{go(i);$("#nav").classList.remove("open");$("#jump").setAttribute("aria-expanded","false");}},
     el("span",{class:"n",text:String(i+1)}),el("span",{text:s.title}));
   const li=el("li",{},b);
@@ -376,28 +377,57 @@ function next(){
 }
 
 /* ---------- Summary ---------- */
-function computeGaps(){
-  const gaps=[];
+function buildAssessment(){
+  const blockers=[],gaps=[],suggestions=[];
+  const materialFields=new Set([
+    "summary","problem","affected","outcome","metrics","inscope","outscope",
+    "targetDate","driver","dataClass","secReview"
+  ]);
+  function add(list,f,text){
+    if(!list.some(x=>x.f.id===f.id&&x.text===text))list.push({f:f,text:text});
+  }
   ALL.forEach(f=>{
-    const v=val(f.id);
-    if(f.required&&!v)gaps.push({f:f,rank:["problem","sponsor"].includes(f.id)?0:1,text:f.name+": missing."});
-    else if(isUnk(v)&&f.required){
-      const o=val(f.id+"_owner");
-      gaps.push({f:f,rank:["problem","sponsor"].includes(f.id)?0:2,text:f.name+": unknown"+(o?", ask "+o:"")+"."});
+    const v=val(f.id),unknown=isUnk(v),empty=!v;
+    if(["problem","sponsor"].includes(f.id)&&(empty||unknown)){
+      const owner=val(f.id+"_owner");
+      add(blockers,f,f.name+": "+(empty?"missing":"unknown")+(owner?" (ask "+owner+")":"")+".");
+      return;
     }
-    fieldFlags(f,false).forEach(m=>gaps.push({f:f,rank:3,text:f.name+": "+m}));
+    if(f.required&&(empty||unknown)){
+      const owner=val(f.id+"_owner");
+      add(gaps,f,f.name+": "+(empty?"missing":"unknown")+(owner?" (ask "+owner+")":"")+".");
+    }
+    fieldFlags(f,false).forEach(message=>{
+      const issue=f.name+": "+message;
+      if(materialFields.has(f.id))add(gaps,f,issue);
+      else add(suggestions,f,issue);
+    });
   });
-  return gaps.map((g,idx)=>({g:g,idx:idx})).sort((a,b)=>a.g.rank-b.g.rank||a.idx-b.idx).map(x=>x.g);
+  const rank=(a,b)=>a.f.stepIndex-b.f.stepIndex||
+    STEPS[a.f.stepIndex].fields.indexOf(a.f)-STEPS[b.f.stepIndex].fields.indexOf(b.f);
+  blockers.sort(rank);gaps.sort(rank);suggestions.sort(rank);
+  let status,cls,reason;
+  if(blockers.length){
+    status="Not actionable";cls="no";
+    reason="Triage cannot start until the core problem and accountable sponsor are identified.";
+  }else if(gaps.length){
+    status="Needs clarification";cls="needs";
+    reason="The request has a problem and sponsor, but important information needs clarification before it can be evaluated confidently.";
+  }else{
+    status="Ready for Triage";cls="ready";
+    reason="The request has the core information needed to begin triage. This is not project approval or authorization to start delivery.";
+  }
+  const recommendations=[];
+  if(!val("problem")||isUnk(val("problem")))recommendations.push("Document the problem being experienced, who is affected, and the impact of leaving it unresolved.");
+  if(!val("sponsor")||isUnk(val("sponsor")))recommendations.push("Identify the accountable sponsor who can own the business outcome and make or secure decisions.");
+  if(gaps.length)recommendations.push("Review the important gaps below and assign an owner and target date to resolve each one.");
+  if(!val("metrics")||isUnk(val("metrics"))||!/\d/.test(val("metrics")))
+    recommendations.push("Define a measurable outcome with a baseline, target, and measurement timeframe.");
+  if(!recommendations.length)recommendations.push("Confirm the appropriate triage participants and evaluate strategic fit, priority, capacity, dependencies, and delivery options.");
+  return {status:status,cls:cls,reason:reason,blockers:blockers,gaps:gaps,suggestions:suggestions,recommendations:recommendations};
 }
 function buildModel(){
-  const gaps=computeGaps();
-  const missingCore=[];
-  if(!val("problem")||isUnk(val("problem")))missingCore.push("a problem statement");
-  if(!val("sponsor")||isUnk(val("sponsor")))missingCore.push("a named sponsor");
-  let status,cls,reason;
-  if(missingCore.length){status="Not actionable";cls="no";reason="Triage can’t start without "+missingCore.join(" and ")+".";}
-  else if(gaps.length){status="Needs more info";cls="needs";reason=gaps.length+(gaps.length===1?" open item":" open items")+" to close before triage.";}
-  else{status="Ready";cls="ready";reason="All required answers are in and no flags remain.";}
+  const assessment=buildAssessment();
   const sections=STEPS.map(s=>({
     h:s.title==="Request basics"?"Request":s.title,
     items:s.fields.filter(f=>!f.header).map(f=>[f.name,val(f.id)])
@@ -405,21 +435,33 @@ function buildModel(){
   const open=ALL.filter(f=>isUnk(val(f.id))).map(f=>{
     const o=val(f.id+"_owner");return f.name+(o?" (ask "+o+")":" (no owner named)");
   });
-  return{title:val("title")||"Untitled request",summary:val("summary"),status:status,cls:cls,reason:reason,gaps:gaps,sections:sections,open:open};
+  return {title:val("title")||"Untitled request",summary:val("summary"),
+    status:assessment.status,cls:assessment.cls,reason:assessment.reason,
+    blockers:assessment.blockers,gaps:assessment.gaps,
+    suggestions:assessment.suggestions,recommendations:assessment.recommendations,
+    sections:sections,open:open};
 }
 function toMarkdown(m){
   const L=[];
   L.push("# "+m.title,"");
   if(m.summary)L.push(m.summary,"");
-  L.push("## Readiness","","**"+m.status+".** "+m.reason);
-  if(m.gaps.length){L.push("","Top gaps:");m.gaps.slice(0,3).forEach((g,i)=>L.push((i+1)+". "+g.text));}
+  L.push("## Assessment","","**"+m.status+".** "+m.reason);
+  function addFindings(title,items){
+    if(!items.length)return;
+    L.push("","### "+title,"");
+    items.forEach((x,i)=>L.push((i+1)+". "+x.text));
+  }
+  addFindings("Blockers",m.blockers);
+  addFindings("Important gaps",m.gaps);
+  addFindings("Suggestions",m.suggestions);
+  L.push("","### Recommended next steps","");
+  m.recommendations.forEach((x,i)=>L.push((i+1)+". "+x));
   m.sections.forEach(s=>{
     L.push("","## "+s.h,"");
     s.items.forEach(it=>L.push("- **"+it[0]+":** "+(it[1]?it[1].replace(/\n/g,"\n  "):"Not provided")));
   });
   L.push("","## Open questions","");
   if(m.open.length)m.open.forEach(o=>L.push("- "+o));else L.push("- None marked unknown");
-  if(m.gaps.length>3){L.push("","## All gaps","");m.gaps.forEach(g=>L.push("- "+g.text));}
   return L.join("\n")+"\n";
 }
 async function copyText(text,btn){
@@ -443,22 +485,32 @@ function renderSummary(){
   const m=buildModel();
   const copyBtn=el("button",{type:"button",class:"btn",text:"Copy as Markdown"});
   copyBtn.addEventListener("click",()=>copyText(toMarkdown(m),copyBtn));
-  const gapList=m.gaps.length?el("ol",{class:"gaps"},m.gaps.slice(0,3).map(g=>
-    el("li",{},g.text,el("button",{type:"button",class:"link fix",text:"Fix",onclick:()=>go(g.f.stepIndex)})))):null;
-
+  function findingSection(title,items,emptyText){
+    return el("section",{},
+      el("h3",{text:title}),
+      items.length?el("ol",{class:"gaps"},items.map(x=>
+        el("li",{},x.text,el("button",{type:"button",class:"link fix",text:"Review",onclick:()=>go(x.f.stepIndex)})))):
+        el("p",{class:"hint",text:emptyText})
+    );
+  }
   main.append(
     el("div",{class:"verdict "+m.cls},
-      el("p",{class:"label",text:"Readiness"}),
+      el("p",{class:"label",text:"Intake assessment"}),
       el("h2",{text:m.status}),
-      el("p",{text:m.reason}),
-      m.gaps.length?el("p",{text:m.gaps.length>3?"Top 3 of "+m.gaps.length+" gaps:":"Gaps:"}):null,
-      gapList
+      el("p",{text:m.reason})
     ),
     el("div",{class:"toolbar"},
       copyBtn,
       el("button",{type:"button",class:"btn secondary",text:"Download .md",onclick:()=>download(m)}),
       el("button",{type:"button",class:"btn secondary",text:"Edit answers",onclick:()=>go(0)}),
       el("button",{type:"button",class:"btn secondary",text:"Print",onclick:()=>window.print()})
+    ),
+    findingSection("Blockers",m.blockers,"No critical blockers identified."),
+    findingSection("Important gaps",m.gaps,"No important gaps identified."),
+    findingSection("Suggestions",m.suggestions,"No additional suggestions."),
+    el("section",{},
+      el("h3",{text:"Recommended next steps"}),
+      el("ol",{class:"gaps"},m.recommendations.map(x=>el("li",{text:x})))
     ),
     el("article",{class:"doc"},
       el("h2",{text:m.title}),
