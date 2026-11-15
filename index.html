@@ -1,0 +1,1101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TPM Intake Assistant | Amir Fatemi</title>
+<meta name="description" content="A practical tool for project intake, assessment and delivery decisions. Built by Amir Fatemi; runs entirely in your browser.">
+<style>
+:root{
+  --bg:#F5F4F8; --surface:#FFFFFF; --ink:#19151F; --muted:#625B6B; --line:#D9D3E2;
+  --accent:#6425B8; --on-accent:#FFFFFF;
+  --flag-bg:#FFF3DC; --flag-ink:#6B4200; --flag-line:#D9921A;
+  --ok:#2B7A4B; --warn:#B7791F; --bad:#B3382C;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#17121F; --surface:#211A2B; --ink:#F0EAF6; --muted:#B8AFC2; --line:#40354D;
+    --accent:#B78AE8; --on-accent:#1B1028;
+    --flag-bg:#2D2412; --flag-ink:#F0C77A; --flag-line:#B7791F;
+    --ok:#6CC08B; --warn:#E0A63E; --bad:#F08A7E;
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-padding-top:16px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--sans)}
+.wrap{max-width:1060px;margin:0 auto;padding:0 20px}
+.brandbar{display:flex;align-items:center;justify-content:space-between;gap:22px;padding:16px 20px;margin:18px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:12px 12px 0 0;border-bottom:4px solid var(--accent)}
+.brandidentity{display:flex;align-items:center;gap:16px;min-width:0}
+.brandlogo{width:66px;height:66px;object-fit:contain;flex:none}
+.branddivider{height:52px;border-left:1px solid var(--muted);opacity:.65}
+.brandname{font-size:1.1rem;font-weight:750;letter-spacing:.22em;white-space:nowrap}
+.brandtag{margin-top:2px;color:var(--muted);font-size:.78rem;letter-spacing:.09em}
+.brandproject{text-align:right;min-width:0}
+.brandproject strong{display:block;font-size:1.35rem;line-height:1.25}
+.brandproject span{color:var(--muted);font-size:.9rem}
+header.top{padding:24px 0 20px}
+h1{font:600 2rem/1.15 var(--serif);margin:0 0 8px;letter-spacing:-.01em}
+header.top p{margin:0;max-width:60ch;color:var(--muted)}
+.layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:40px;align-items:start;padding-bottom:40px}
+nav.steps{position:sticky;top:16px}
+nav.steps ol{list-style:none;margin:0;padding:0}
+nav.steps li{margin:0 0 2px}
+nav.steps button.item{width:100%;display:flex;gap:10px;align-items:center;text-align:left;padding:7px 8px;border:0;border-radius:4px;background:transparent;color:var(--ink);font:inherit;font-size:.92rem;cursor:pointer}
+nav.steps button.item:hover{background:var(--surface)}
+nav.steps .n{flex:none;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--accent);display:grid;place-items:center;font-size:.75rem;color:var(--accent)}
+nav.steps li.done .n{background:var(--accent);color:var(--on-accent)}
+nav.steps li.current button.item{background:var(--surface);font-weight:600;box-shadow:inset 3px 0 0 var(--accent)}
+button.jump{display:none}
+.reset{margin-top:14px}
+main{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:28px 30px 30px;outline:none;min-width:0}
+.meta{margin:0 0 6px;color:var(--muted);font-size:.9rem}
+.bar{height:4px;background:var(--line);border-radius:2px;margin:0 0 22px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--accent)}
+h2{font:600 1.55rem/1.2 var(--serif);margin:0 0 6px}
+.intro{margin:0 0 20px;color:var(--muted);max-width:62ch}
+.progress-summary{margin:0 0 24px;padding:12px 14px;background:var(--bg);border:1px solid var(--line);border-radius:4px}
+.progress-copy{display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin:0 0 7px;font-size:.9rem}
+.progress-copy strong{font-weight:650}
+.progress-track{height:6px;background:var(--line);border-radius:99px;overflow:hidden}
+.progress-track span{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .18s ease}
+.section-progress{margin:7px 0 0;color:var(--muted);font-size:.85rem}
+.example{margin:6px 0 0;color:var(--muted);font-size:.88rem;max-width:66ch}
+.example strong{color:var(--ink);font-weight:600}
+.nav-status{margin-left:auto;color:var(--muted);font-size:.72rem;white-space:nowrap}
+nav.steps li.done .nav-status{color:var(--ok)}
+.field{margin:0 0 22px}
+.field label{display:block;font-weight:600;margin:0 0 3px}
+.field label .opt{font-weight:400;color:var(--muted)}
+.hint{margin:0 0 7px;color:var(--muted);font-size:.9rem;max-width:62ch}
+input[type=text],input[type=date],select,textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:9px 11px}
+textarea{min-height:84px;resize:vertical}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sub{display:flex;gap:14px;align-items:center;margin-top:5px;min-height:20px}
+.link{background:none;border:0;padding:0;font:inherit;font-size:.88rem;color:var(--accent);text-decoration:underline;cursor:pointer}
+.owner{display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.owner label{margin:0;font-weight:400;font-size:.9rem;color:var(--muted)}
+.owner input{width:auto;flex:1;min-width:180px}
+.flag{margin:8px 0 0;padding:8px 12px;background:var(--flag-bg);color:var(--flag-ink);border-left:3px solid var(--flag-line);font-size:.9rem;border-radius:0 4px 4px 0}
+.gate{margin:4px 0 0;color:var(--flag-ink);background:var(--flag-bg);border-left:3px solid var(--flag-line);padding:8px 12px;font-size:.92rem;border-radius:0 4px 4px 0}
+.actions{display:flex;gap:10px;margin-top:26px;flex-wrap:wrap}
+.btn{font:inherit;font-weight:600;padding:9px 18px;border-radius:4px;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);cursor:pointer}
+.btn.secondary{background:transparent;color:var(--accent)}
+.btn[disabled]{opacity:.4;cursor:default}
+.verdict{border-left:6px solid var(--status);padding:4px 0 4px 18px;margin:0 0 22px}
+.verdict.ready{--status:var(--ok)} .verdict.needs{--status:var(--warn)} .verdict.no{--status:var(--bad)}
+.verdict .label{margin:0;color:var(--muted);font-size:.9rem}
+.verdict h2{font-size:2rem;margin:0 0 4px}
+.verdict p{margin:0 0 6px;max-width:62ch}
+.gaps{margin:10px 0 0;padding-left:20px}
+.gaps li{margin:0 0 4px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 26px}
+.doc h3{font:600 1.15rem/1.3 var(--serif);margin:26px 0 8px;padding-top:14px;border-top:1px solid var(--line)}
+.doc .lead{font-size:1.05rem;margin:0 0 4px;white-space:pre-wrap}
+.report-intro{margin:0 0 22px;color:var(--muted);max-width:72ch}
+.report-panel{border:1px solid var(--line);border-radius:5px;padding:16px 18px;margin:0 0 18px;min-width:0}
+.report-panel h3{font:600 1.12rem/1.3 var(--serif);margin:0 0 10px}
+.report-panel p{margin:0 0 8px}
+.report-panel p:last-child{margin-bottom:0}
+.report-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 18px}
+.report-stat{background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:12px}
+.report-stat .k{display:block;color:var(--muted);font-size:.82rem;margin-bottom:3px}
+.report-stat .v{display:block;font-weight:650;overflow-wrap:anywhere}
+.report-note{background:var(--bg);border-left:3px solid var(--accent);padding:11px 13px;color:var(--muted);font-size:.9rem;margin:16px 0 22px}
+.report-list{margin:0;padding-left:20px}
+.report-list li{margin:0 0 7px}
+.report-section{margin:24px 0 0}
+.report-section>h3{font:600 1.18rem/1.3 var(--serif);margin:0 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+.report-subhead{font-weight:650;margin:14px 0 6px}
+.report-empty{color:var(--muted);font-style:italic}
+@media(max-width:560px){.report-grid{grid-template-columns:minmax(0,1fr)}}
+dl{margin:0;display:grid;grid-template-columns:190px minmax(0,1fr);gap:8px 18px}
+dt{color:var(--muted);font-size:.9rem}
+dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+dd.none{color:var(--muted);font-style:italic}
+.fix{margin-left:8px}
+.about-card{display:grid;grid-template-columns:110px minmax(0,1fr);gap:22px;align-items:center;margin:0 0 14px;padding:22px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.about-logo{width:100px;height:100px;object-fit:contain}
+.about-copy{text-align:center}
+.about-copy .brandname{font-size:1.05rem}
+.about-copy .brandtag{font-size:.82rem}
+.about-rule{height:2px;background:var(--accent);width:min(100%,520px);margin:14px auto}
+.about-copy h2{margin:0 0 6px}
+.about-copy p{margin:0;color:var(--muted)}
+.about-credit{margin-top:16px;padding:10px 14px;background:var(--bg);border-radius:5px;font-size:.9rem}
+.site-footer{padding:0 0 32px;color:var(--muted);font-size:.86rem}
+.privacy-note{max-width:78ch;margin:0 auto;text-align:center}
+.footer-brand{display:flex;justify-content:space-between;gap:14px;align-items:center;margin-top:18px;padding:14px 18px;background:var(--surface);border:1px solid var(--line);border-radius:9px;color:var(--ink)}
+.footer-brand strong{font-size:1rem}.footer-brand span{color:var(--muted)}
+@media (max-width:820px){
+  .brandbar{align-items:flex-start;flex-direction:column;gap:12px}
+  .brandproject{text-align:left}
+  .brandproject strong{font-size:1.15rem}
+  .about-card{grid-template-columns:1fr;justify-items:center}
+  .about-logo{width:82px;height:82px}
+  .footer-brand{flex-direction:column;text-align:center;gap:4px}
+  .layout{grid-template-columns:minmax(0,1fr);gap:16px}
+  nav.steps{position:static}
+  button.jump{display:inline-block;margin-bottom:8px}
+  nav.steps ol,nav.steps .reset{display:none}
+  nav.steps.open ol,nav.steps.open .reset{display:block}
+  main{padding:22px 18px 24px}
+  dl{grid-template-columns:minmax(0,1fr);gap:2px}
+  dd{margin-bottom:10px}
+}
+@media print{
+  nav.steps,.actions,.toolbar,.site-footer,header.top p,.brandbar,.fix{display:none!important}
+  body{background:#fff;color:#000} main{border:0;padding:0}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<!-- Branding: AF monogram supplied by Amir Fatemi; image stored at assets/af-logo.png. -->
+<body>
+<div class="wrap">
+  <div class="brandbar" aria-label="Amir Fatemi project branding">
+    <div class="brandidentity">
+      <img class="brandlogo" src="assets/af-logo.png" alt="AF monogram logo">
+      <span class="branddivider" aria-hidden="true"></span>
+      <div><div class="brandname">AMIR FATEMI</div><div class="brandtag">TECHNOLOGY • PRODUCT • DELIVERY</div></div>
+    </div>
+    <div class="brandproject"><strong>TPM Intake Assistant</strong><span>Project Intake, Assessment &amp; Decision Support</span></div>
+  </div>
+  <header class="top">
+    <h1>Project Intake, Assessment &amp; Decision Support</h1>
+    <p>Work through the request one section at a time. Examples help clarify what useful answers look like; your progress is saved in this browser, and the final assessment separates blockers from follow-up items.</p>
+  </header>
+  <div class="layout">
+    <nav class="steps" id="nav" aria-label="Steps">
+      <button type="button" class="btn secondary jump" id="jump" aria-expanded="false">Jump to a step</button>
+      <ol id="steps"></ol>
+      <button type="button" class="link reset" id="reset">Start over</button>
+    </nav>
+    <main id="main" tabindex="-1"><noscript>This page needs JavaScript.</noscript></main>
+  </div>
+  <section class="about-card" aria-label="About this project">
+    <img class="about-logo" src="assets/af-logo.png" alt="AF monogram logo">
+    <div class="about-copy">
+      <div class="brandname">AMIR FATEMI</div>
+      <div class="brandtag">TECHNOLOGY • PRODUCT • DELIVERY</div>
+      <div class="about-rule"></div>
+      <h2>TPM Intake Assistant</h2>
+      <p>A practical tool I built for better project intake, assessment and delivery decisions.</p>
+      <div class="about-credit">TPM Intake Assistant by Amir Fatemi © 2026</div>
+    </div>
+  </section>
+  <footer class="site-footer">
+    <div class="privacy-note">This page runs in your browser. Nothing you type is sent anywhere. Answers are saved in this browser only, so they are still here if you refresh. Use Start over to clear them. Checks use simple pattern matching. Decision-support content is generated from the answers entered and is intended to guide human review, not replace it or authorize delivery.</div>
+    <div class="footer-brand"><strong>TPM Intake Assistant</strong><span>by Amir Fatemi</span><span>© 2026 Amir Fatemi. All rights reserved.</span></div>
+  </footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- Content: edit the questions here ---------- */
+const YNU=["Yes","No","Unknown"];
+const STEPS=[
+ {title:"Request basics",intro:"Who is asking, and what is it in one line.",fields:[
+  {id:"title",name:"Title",label:"Request title",type:"text",required:true,header:true,hint:"A short name for the request."},
+  {id:"requester",name:"Requester",label:"Requester and team",type:"text",required:true},
+  {id:"sponsor",name:"Sponsor",label:"Sponsor or approving executive",type:"text",required:true,hint:"The person who owns the budget or the decision."},
+  {id:"date",name:"Date submitted",label:"Date submitted",type:"date"},
+  {id:"summary",name:"Summary",label:"One-sentence summary",type:"textarea",rows:2,required:true,header:true,checks:["vague","short"]}
+ ]},
+ {title:"Problem",intro:"Describe what is wrong or missing today.",fields:[
+  {id:"problem",name:"Problem",label:"What problem are you trying to solve?",type:"textarea",required:true,hint:"Describe the problem, not the fix.",example:"Support teams spend 6 hours each week manually reconciling duplicate customer records, delaying case resolution.",checks:["solution","vague","short"]},
+  {id:"affected",name:"Who is affected",label:"Who feels this problem, and how many people?",type:"textarea",required:true,example:"About 45 support agents across the Vancouver and Toronto teams; customers experience longer wait times.",checks:["vague"]},
+  {id:"today",name:"Handled today",label:"How is it handled today?",type:"textarea"},
+  {id:"evidence",name:"Evidence",label:"What evidence do you have?",type:"textarea",hint:"Incidents, tickets, customer complaints, metrics, audit findings."}
+ ]},
+ {title:"Value and success",intro:"What changes if this works, and how you would know.",fields:[
+  {id:"outcome",name:"Desired outcome",label:"What should be different when this is done?",type:"textarea",required:true,checks:["vague","short"]},
+  {id:"metrics",name:"Success metrics",label:"How will you measure success?",type:"textarea",required:true,hint:"Give a baseline and a target, such as “40 minutes today, 10 minutes by Q3”.",example:"Reduce average case handling time from 40 minutes to 25 minutes within 90 days of launch.",checks:["metric","vague"]},
+  {id:"inaction",name:"Cost of inaction",label:"What happens if nothing is done?",type:"textarea",checks:["vague"]},
+  {id:"goals",name:"Linked goal",label:"Which team or company goal does this support?",type:"text"}
+ ]},
+ {title:"Scope",intro:"What is included, what is not, and what done means.",fields:[
+  {id:"inscope",name:"In scope",label:"What is in scope?",type:"textarea",required:true,example:"Automate duplicate detection, provide a review queue, and integrate with the existing CRM.",checks:["vague"]},
+  {id:"outscope",name:"Out of scope",label:"What is explicitly out of scope?",type:"textarea",required:true,example:"Replacing the CRM, changing customer identity policies, or migrating historical records."},
+  {id:"done",name:"Definition of done",label:"What does done look like?",type:"textarea"},
+  {id:"mvp",name:"First phase",label:"Is there a smaller first phase?",type:"textarea"}
+ ]},
+ {title:"People",intro:"Who uses it, who decides, and who runs it afterwards.",fields:[
+  {id:"users",name:"Users",label:"Who will use it?",type:"textarea",checks:["vague"]},
+  {id:"approvers",name:"Approvers and consulted",label:"Who must approve or be consulted?",type:"textarea"},
+  {id:"operators",name:"Operators",label:"Who will run and support it after launch?",type:"textarea"}
+ ]},
+ {title:"Requirements",intro:"What it has to do, and how well.",fields:[
+  {id:"functional",name:"Functional requirements",label:"Key capabilities and user workflows",type:"textarea",rows:4},
+  {id:"integrations",name:"Integrations and data",label:"Systems it must connect to, and the data going in and out",type:"textarea"},
+  {id:"nonfunc",name:"Non-functional requirements",label:"Performance, availability, reporting, monitoring, support",type:"textarea",hint:"Use numbers where you can, such as uptime or response time.",checks:["vague"]}
+ ]},
+ {title:"Security and compliance",intro:"Data sensitivity and review needs.",fields:[
+  {id:"dataClass",name:"Data classification",label:"Highest classification of the data involved",type:"select",required:true,options:["Public","Internal","Confidential","Restricted","Unknown"]},
+  {id:"regulated",name:"Regulated data",label:"Does it involve personal or regulated data?",type:"select",options:YNU},
+  {id:"secReview",name:"Security review",label:"Has a security review been done or planned?",type:"select",required:true,options:["Already done","Planned","Not needed","Unknown"]},
+  {id:"compliance",name:"Compliance notes",label:"Regulations, internal policies, or audit needs",type:"textarea"}
+ ]},
+ {title:"Technical context",intro:"What it touches and what it depends on.",fields:[
+  {id:"systems",name:"Systems affected",label:"Systems and platforms affected",type:"textarea"},
+  {id:"deps",name:"Dependencies",label:"Dependencies on other teams or projects",type:"textarea",example:"CRM API access from the Platform team; security review from Information Security; test data from Operations."},
+  {id:"buyBuild",name:"Build or buy",label:"Build, buy, or no preference?",type:"select",options:["Build","Buy","No preference","Unknown"]}
+ ]},
+ {title:"Timeline and resources",intro:"When it is needed, why, and who is available.",fields:[
+  {id:"targetDate",name:"Target date",label:"Target date",type:"text",required:true,placeholder:"2027-03-31 or Q2 2027"},
+  {id:"deadlineType",name:"Deadline type",label:"Is the date hard or soft?",type:"select",options:["Hard","Soft","Unknown"]},
+  {id:"driver",name:"Date driver",label:"What is driving the date?",type:"textarea",required:true,hint:"A contract, launch, regulation, event, or budget cycle.",example:"A customer contract renewal on 30 June requires the new workflow to be operational by 1 June.",checks:["vague"]},
+  {id:"budget",name:"Budget",label:"Funding source or budget range",type:"text"},
+  {id:"people",name:"Committed people",label:"People or teams already committed",type:"textarea"}
+ ]},
+ {title:"Risks and rollout",intro:"What could go wrong, and how it reaches users.",fields:[
+  {id:"risks",name:"Risks",label:"Known risks",type:"textarea",example:"The CRM API may not support the required event volume; mitigation is to validate throughput during technical discovery."},
+  {id:"assumptions",name:"Assumptions",label:"Assumptions this request depends on",type:"textarea"},
+  {id:"constraints",name:"Constraints",label:"Constraints or blockers",type:"textarea"},
+  {id:"rollout",name:"Rollout and adoption",label:"Training, communications, migration, and support needs",type:"textarea"},
+  {id:"priority",name:"Priority context",label:"Priority compared with other work you know of, and the impact of delay",type:"textarea",checks:["vague"]}
+ ]}
+];
+
+/* ---------- Setup ---------- */
+const KEY="tpm-intake-v1";
+const now=new Date();
+const today=[now.getFullYear(),String(now.getMonth()+1).padStart(2,"0"),String(now.getDate()).padStart(2,"0")].join("-");
+const N=STEPS.length;
+const ALL=[];
+STEPS.forEach((s,i)=>s.fields.forEach(f=>{f.stepIndex=i;ALL.push(f);}));
+let state={answers:{date:today},step:0,ack:{}};
+const showEmpty=new Set();
+try{
+  const raw=localStorage.getItem(KEY);
+  if(raw){const s=JSON.parse(raw);
+    if(s&&s.answers){state.answers=Object.assign({date:today},s.answers);state.step=Math.min(Math.max(+s.step||0,0),N+1);}}
+}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({answers:state.answers,step:state.step}));}catch(e){}}
+
+const $=(sel,root)=>(root||document).querySelector(sel);
+const main=$("#main");
+function el(tag,attrs){
+  const n=document.createElement(tag);
+  const a=attrs||{};
+  for(const k in a){
+    const v=a[k];
+    if(v===false||v==null)continue;
+    if(k==="class")n.className=v;
+    else if(k==="text")n.textContent=v;
+    else if(k.slice(0,2)==="on")n.addEventListener(k.slice(2),v);
+    else n.setAttribute(k,v===true?"":v);
+  }
+  for(let i=2;i<arguments.length;i++){
+    [].concat(arguments[i]).flat(Infinity).forEach(c=>{
+      if(c==null||c===false)return;
+      n.append(c.nodeType?c:document.createTextNode(c));
+    });
+  }
+  return n;
+}
+const val=id=>(state.answers[id]||"").trim();
+const isUnk=v=>/^unknown$/i.test(v);
+
+/* ---------- Checks ---------- */
+const VAGUE=/\b(asap|urgent|urgently|soon|improve|improved|improving|improvement|improvements|better|faster|easier|fast|scalable|robust|seamless|user-friendly|modern|everyone|everybody|all users|all teams|various|etc)\b/i;
+const SOLUTION=/^\s*(we need|we want|we would like|need|build|create|implement|add|set up|setup|develop|deploy|migrate|a new|new|launch|install|buy|purchase)\b/i;
+
+function crossFlags(f){
+  const out=[];
+  if(f.id==="driver"&&val("deadlineType")==="Hard"&&(!val("driver")||isUnk(val("driver"))))
+    out.push("A hard deadline should have a known driver. Find out what sets it.");
+  if(f.id==="targetDate"){
+    const v=val("targetDate"),t=Date.parse(v);
+    if(v&&!isUnk(v)&&!isNaN(t)&&t<Date.now()-864e5)out.push("This date is in the past. Check it.");
+  }
+  if(f.id==="secReview"){
+    const sensitive=["Confidential","Restricted"].includes(val("dataClass"))||val("regulated")==="Yes";
+    if(sensitive&&["","Not needed","Unknown"].includes(val("secReview")))
+      out.push("Sensitive or regulated data usually needs a security review. Confirm.");
+  }
+  return out;
+}
+function fieldFlags(f,includeEmpty){
+  const v=val(f.id),out=[];
+  if(!v){
+    if(includeEmpty&&f.required)out.push("Empty. Answer it, or choose Don’t know.");
+    return out.concat(crossFlags(f));
+  }
+  if(isUnk(v))return crossFlags(f);
+  (f.checks||[]).forEach(c=>{
+    if(c==="vague"){const m=v.match(VAGUE);if(m)out.push("“"+m[0].toLowerCase()+"” is vague. Add a date, number, or example.");}
+    if(c==="short"&&v.length<25)out.push("Short answer. Add detail or an example.");
+    if(c==="metric"&&!/\d/.test(v))out.push("No number found. Give a baseline and a target.");
+    if(c==="solution"&&SOLUTION.test(v))out.push("This reads as a solution. What problem does it solve, and what happens if nothing is built?");
+  });
+  return out.concat(crossFlags(f));
+}
+function stepFlags(i,includeEmpty){
+  const out=[];
+  STEPS[i].fields.forEach(f=>fieldFlags(f,includeEmpty).forEach(m=>out.push({f:f,msg:m})));
+  return out;
+}
+
+/* ---------- Navigation ---------- */
+const stepsEl=$("#steps");
+const navItems=[];
+STEPS.concat([{title:"Assessment"},{title:"Report & Downloads"}]).forEach((s,i)=>{
+  const status=el("span",{class:"nav-status",text:"Not started"});
+  const b=el("button",{type:"button",class:"item",onclick:()=>{go(i);$("#nav").classList.remove("open");$("#jump").setAttribute("aria-expanded","false");}},
+    el("span",{class:"n",text:String(i+1)}),el("span",{text:s.title}),status);
+  const li=el("li",{},b);
+  stepsEl.append(li);navItems.push({li:li,b:b,status:status});
+});
+function stepDone(i){
+  const s=STEPS[i],req=s.fields.filter(f=>f.required);
+  return req.length?req.every(f=>val(f.id)):s.fields.some(f=>val(f.id));
+}
+function stepCounts(i){
+  const req=STEPS[i].fields.filter(f=>f.required);
+  return {done:req.filter(f=>!!val(f.id)).length,total:req.length};
+}
+function overallCounts(){
+  const req=ALL.filter(f=>f.required);
+  return {done:req.filter(f=>!!val(f.id)).length,total:req.length};
+}
+function updateProgress(){
+  const overall=overallCounts(),overallText=$("#overall-progress-text"),overallFill=$("#overall-progress-fill");
+  if(overallText)overallText.textContent=overall.done+" of "+overall.total+" required questions addressed";
+  if(overallFill)overallFill.style.width=(overall.total?Math.round(overall.done/overall.total*100):0)+"%";
+  const section=stepCounts(state.step),sectionText=$("#section-progress");
+  if(sectionText){
+    sectionText.textContent=section.total
+      ? section.done+" of "+section.total+" required questions addressed in this section"
+      : "No required questions in this section. Add information where it is available.";
+  }
+}
+function refreshNav(){
+  navItems.forEach((n,i)=>{
+    n.li.classList.toggle("current",i===state.step);
+    n.li.classList.toggle("done",i<N&&stepDone(i));
+    if(i<N){
+      const counts=stepCounts(i);
+      n.status.textContent=counts.total
+        ? (stepDone(i)?"Complete":(counts.done?"In progress":"Not started"))
+        : (STEPS[i].fields.some(f=>val(f.id))?"Started":"Optional");
+    }else if(i===N){
+      n.status.textContent="Review";
+    }else{
+      n.status.textContent="Export";
+    }
+    if(i===state.step)n.b.setAttribute("aria-current","step");else n.b.removeAttribute("aria-current");
+  });
+}
+$("#jump").addEventListener("click",()=>{
+  const nav=$("#nav"),open=nav.classList.toggle("open");
+  $("#jump").setAttribute("aria-expanded",String(open));
+});
+$("#reset").addEventListener("click",()=>{
+  if(!confirm("Clear all answers and start over?"))return;
+  state={answers:{date:today},step:0,ack:{}};showEmpty.clear();save();go(0);
+});
+function go(i){
+  state.step=i;save();render();
+  window.scrollTo({top:0});
+  main.focus({preventScroll:true});
+}
+
+/* ---------- Step view ---------- */
+function paintFlags(f){
+  const fe=document.getElementById("f-"+f.id+"-f");
+  if(!fe)return;
+  const msgs=fieldFlags(f,showEmpty.has(f.stepIndex));
+  fe.replaceChildren.apply(fe,msgs.map(m=>el("p",{class:"flag",text:m})));
+}
+function repaintShown(){
+  STEPS[state.step].fields.forEach(g=>{
+    const fe=document.getElementById("f-"+g.id+"-f");
+    if(fe&&fe.childElementCount)paintFlags(g);
+  });
+}
+function fieldEl(f){
+  const id="f-"+f.id,desc=(f.hint?id+"-h ":"")+id+"-f";
+  let input;
+  if(f.type==="textarea")input=el("textarea",{id:id,rows:f.rows||3,"aria-describedby":desc});
+  else if(f.type==="select")input=el("select",{id:id,"aria-describedby":desc},
+      el("option",{value:"",text:"Select…"}),f.options.map(o=>el("option",{value:o,text:o})));
+  else input=el("input",{id:id,type:f.type||"text",placeholder:f.placeholder,"aria-describedby":desc});
+  input.value=state.answers[f.id]||"";
+
+  const ownerIn=el("input",{id:id+"-o",type:"text",placeholder:"Name or team"});
+  ownerIn.value=state.answers[f.id+"_owner"]||"";
+  ownerIn.addEventListener("input",()=>{state.answers[f.id+"_owner"]=ownerIn.value;save();});
+  const owner=el("div",{class:"owner"},el("label",{for:id+"-o",text:"Who can answer this?"}),ownerIn);
+  const sync=()=>{owner.hidden=!isUnk(val(f.id));};
+  sync();
+
+  const onChange=()=>{state.answers[f.id]=input.value;save();sync();refreshNav();updateProgress();repaintShown();};
+  input.addEventListener("input",onChange);
+  input.addEventListener("change",onChange);
+  input.addEventListener("blur",()=>paintFlags(f));
+
+  const dk=f.type==="select"?null:el("button",{type:"button",class:"link",text:"Don’t know",onclick:()=>{
+    input.value="Unknown";input.dispatchEvent(new Event("input",{bubbles:true}));input.focus();}});
+
+  return el("div",{class:"field"},
+    el("label",{for:id},f.label,f.required?null:el("span",{class:"opt",text:" (optional)"})),
+    f.hint?el("p",{class:"hint",id:id+"-h",text:f.hint}):null,
+    input,
+    dk?el("div",{class:"sub"},dk):null,
+    owner,
+    el("div",{id:id+"-f","aria-live":"polite"})
+  );
+}
+function renderStep(){
+  const i=state.step,s=STEPS[i];
+  const gate=el("p",{class:"gate",id:"gate",hidden:true,text:"Flags are suggestions. Fix them, or press Next again to continue."});
+  const nextBtn=el("button",{type:"button",class:"btn",text:i===N-1?"Build executive report":"Next",onclick:next});
+  main.append(
+    el("p",{class:"meta",text:"Step "+(i+1)+" of "+N}),
+    el("div",{class:"bar"},el("span",{style:"width:"+Math.round((i+1)/N*100)+"%"})),
+    el("h2",{text:s.title}),
+    el("p",{class:"intro",text:s.intro}),
+    el("div",{class:"progress-summary","aria-live":"polite"},
+      el("p",{class:"progress-copy"},
+        el("strong",{id:"overall-progress-text",text:""}),
+        el("span",{text:"Overall intake progress"})
+      ),
+      el("div",{class:"progress-track","aria-hidden":"true"},
+        el("span",{id:"overall-progress-fill",style:"width:0%"})
+      ),
+      el("p",{class:"section-progress",id:"section-progress",text:""})
+    ),
+    ...s.fields.map(fieldEl),
+    gate,
+    el("div",{class:"actions"},
+      el("button",{type:"button",class:"btn secondary",text:"Back",disabled:i===0,onclick:()=>go(i-1)}),
+      nextBtn)
+  );
+  updateProgress();
+  if(showEmpty.has(i))s.fields.forEach(paintFlags);
+}
+function next(){
+  const i=state.step,flags=stepFlags(i,true);
+  const sig=flags.map(x=>x.f.id+"|"+x.msg).join("\n");
+  if(flags.length&&state.ack[i]!==sig){
+    state.ack[i]=sig;showEmpty.add(i);
+    STEPS[i].fields.forEach(paintFlags);
+    $("#gate").hidden=false;
+    const first=document.getElementById("f-"+flags[0].f.id);
+    if(first){first.scrollIntoView({block:"center"});first.focus({preventScroll:true});}
+    return;
+  }
+  go(i+1);
+}
+
+/* ---------- Summary ---------- */
+function buildAssessment(){
+  const blockers=[],gaps=[],suggestions=[];
+  const materialFields=new Set([
+    "summary","problem","affected","outcome","metrics","inscope","outscope",
+    "targetDate","driver","dataClass","secReview"
+  ]);
+  function add(list,f,text){
+    if(!list.some(x=>x.f.id===f.id&&x.text===text))list.push({f:f,text:text});
+  }
+  ALL.forEach(f=>{
+    const v=val(f.id),unknown=isUnk(v),empty=!v;
+    if(["problem","sponsor"].includes(f.id)&&(empty||unknown)){
+      const owner=val(f.id+"_owner");
+      add(blockers,f,f.name+": "+(empty?"missing":"unknown")+(owner?" (ask "+owner+")":"")+".");
+      return;
+    }
+    if(f.required&&(empty||unknown)){
+      const owner=val(f.id+"_owner");
+      add(gaps,f,f.name+": "+(empty?"missing":"unknown")+(owner?" (ask "+owner+")":"")+".");
+    }
+    fieldFlags(f,false).forEach(message=>{
+      const issue=f.name+": "+message;
+      if(materialFields.has(f.id))add(gaps,f,issue);
+      else add(suggestions,f,issue);
+    });
+  });
+  const rank=(a,b)=>a.f.stepIndex-b.f.stepIndex||
+    STEPS[a.f.stepIndex].fields.indexOf(a.f)-STEPS[b.f.stepIndex].fields.indexOf(b.f);
+  blockers.sort(rank);gaps.sort(rank);suggestions.sort(rank);
+  let status,cls,reason;
+  if(blockers.length){
+    status="Not actionable";cls="no";
+    reason="Triage cannot start until the core problem and accountable sponsor are identified.";
+  }else if(gaps.length){
+    status="Needs clarification";cls="needs";
+    reason="The request has a problem and sponsor, but important information needs clarification before it can be evaluated confidently.";
+  }else{
+    status="Ready for Triage";cls="ready";
+    reason="The request has the core information needed to begin triage. This is not project approval or authorization to start delivery.";
+  }
+  const recommendations=[];
+  if(!val("problem")||isUnk(val("problem")))recommendations.push("Document the problem being experienced, who is affected, and the impact of leaving it unresolved.");
+  if(!val("sponsor")||isUnk(val("sponsor")))recommendations.push("Identify the accountable sponsor who can own the business outcome and make or secure decisions.");
+  if(gaps.length)recommendations.push("Review the important gaps below and assign an owner and target date to resolve each one.");
+  if(!val("metrics")||isUnk(val("metrics"))||!/\d/.test(val("metrics")))
+    recommendations.push("Define a measurable outcome with a baseline, target, and measurement timeframe.");
+  if(!recommendations.length)recommendations.push("Confirm the appropriate triage participants and evaluate strategic fit, priority, capacity, dependencies, and delivery options.");
+  return {status:status,cls:cls,reason:reason,blockers:blockers,gaps:gaps,suggestions:suggestions,recommendations:recommendations};
+}
+/* ---------- TPM decision support ---------- */
+function buildDecisionSupport(assessment){
+  const decisions=[],ownership=[],dependencies=[],questions=[],nextSteps=[];
+  const missing=id=>!val(id)||isUnk(val(id));
+  const askOwner=id=>{
+    const owner=val(id+"_owner");
+    return owner?owner:"Not identified";
+  };
+  function addDecision(title,owner,information,trigger){
+    decisions.push({title:title,owner:owner,information:information,trigger:trigger});
+  }
+  function addQuestion(group,question,reason){
+    questions.push({group:group,question:question,reason:reason});
+  }
+
+  if(missing("sponsor")){
+    addDecision("Identify the accountable business sponsor","Business leadership",
+      "A named sponsor who owns the outcome and can make or secure decisions.",
+      "The sponsor field is empty or marked unknown.");
+    addQuestion("Sponsor / business","Who is accountable for the business outcome and can make or secure the required decisions?",
+      "No accountable sponsor is identified in the intake.");
+  }
+  if(missing("outcome")||missing("metrics")){
+    addDecision("Agree the intended outcome and how success will be measured",
+      val("sponsor")&&!isUnk(val("sponsor"))?val("sponsor"):"Sponsor to be identified",
+      "A clear outcome and, where possible, a baseline, target, and measurement timeframe.",
+      "The desired outcome or success measure is missing or marked unknown.");
+    addQuestion("Sponsor / business","What measurable change should this initiative deliver, and how will we know it has worked?",
+      "The outcome or success measure needs clarification.");
+  }
+  if(missing("inscope")||missing("outscope")){
+    addDecision("Confirm the initiative boundaries","Sponsor with delivery / product leads",
+      "Agreement on what is included and explicitly excluded.",
+      "Scope or out-of-scope information is missing or marked unknown.");
+    addQuestion("Sponsor / product","What is included in the first delivery, and what is explicitly excluded?",
+      "The intake does not establish both sides of the scope boundary.");
+  }
+  if(missing("approvers")){
+    ownership.push({role:"Approvers and consulted stakeholders",status:"Not identified",
+      detail:"The intake does not name who must approve the work or be consulted.",
+      followup:"Ask the sponsor to identify decision-makers and required stakeholders."});
+    addQuestion("Sponsor / delivery","Who needs to approve this initiative, and which teams must be consulted?",
+      "Approvers and consulted stakeholders are not identified.");
+  }
+  if(missing("operators")){
+    ownership.push({role:"Operational owner",status:"Not identified",
+      detail:"No team or person is named to operate and support the outcome after launch.",
+      followup:"Confirm the receiving operational or support team before delivery planning."});
+    addQuestion("Operations / support","Which team will own day-to-day operation, support, and ongoing maintenance after launch?",
+      "The post-launch operational owner is not identified.");
+  }
+  if(missing("people")){
+    ownership.push({role:"Delivery capacity",status:"Not confirmed",
+      detail:"The intake does not identify people or teams committed to the work.",
+      followup:"Confirm which teams can contribute and whether capacity is actually available."});
+    addQuestion("Sponsor / functional leads","Which people or teams are committed, and has their capacity been confirmed?",
+      "Committed delivery resources are not identified.");
+  }
+  if(missing("deps")){
+    dependencies.push({status:"Not confirmed",
+      detail:"No cross-team or project dependencies are recorded.",
+      followup:"Confirm whether there are dependencies; if none exist, record that explicitly."});
+    addQuestion("Engineering / delivery","Which teams, systems, projects, or external parties must deliver something before this work can proceed?",
+      "The dependency field is empty or marked unknown.");
+  }else{
+    dependencies.push({status:isUnk(val("deps"))?"Unknown":"Requester-provided",
+      detail:val("deps"),
+      followup:"Validate each dependency with the named owning team, including its deliverable and required date."});
+    if(!isUnk(val("deps"))){
+      addQuestion("Engineering / delivery","Have the listed dependencies been validated with each owning team, including deliverables and required dates?",
+        "Dependencies were listed by the requester and should be confirmed with the teams involved.");
+    }
+  }
+  if(missing("integrations")&&missing("systems")){
+    dependencies.push({status:"Technical touchpoints not identified",
+      detail:"No affected systems or integrations are recorded.",
+      followup:"Ask engineering to identify systems, interfaces, data flows, and technical owners."});
+    addQuestion("Engineering / architecture","Which systems, interfaces, and data flows will be affected, and who owns each one?",
+      "Technical touchpoints are not identified.");
+  }
+  if(missing("secReview")||["Unknown","Not needed"].includes(val("secReview"))){
+    if(val("dataClass")==="Confidential"||val("dataClass")==="Restricted"||val("regulated")==="Yes"){
+      addDecision("Confirm the security review approach","Security / privacy, with the sponsor",
+        "A confirmed review outcome or an agreed review plan and accountable reviewer.",
+        "The intake indicates sensitive or regulated data, but the security review is not confirmed.");
+      addQuestion("Security / privacy","What security and privacy reviews are required, who owns them, and when must they be completed?",
+        "The data classification or regulated-data answer indicates a review may be needed.");
+    }
+  }
+  if(missing("deadlineType")||missing("driver")){
+    addDecision("Validate the target date and its business driver","Sponsor with delivery lead",
+      "Whether the date is hard or soft, what drives it, and the consequence of missing it.",
+      "The deadline type or date driver is not established.");
+    addQuestion("Sponsor / delivery","What drives the target date, how firm is it, and what is the consequence of missing it?",
+      "The date constraint needs validation.");
+  }
+  if(val("risks")&& !isUnk(val("risks"))){
+    addQuestion("Delivery / engineering","Who owns each listed risk, and what evidence or action will reduce its likelihood or impact?",
+      "Risks were provided but ownership and mitigation may need confirmation.");
+  }else{
+    addQuestion("Delivery / engineering","What could prevent delivery or adoption, and who would own the response?",
+      "No specific risks are recorded in the intake.");
+  }
+  if(assessment.blockers.length){
+    nextSteps.push("Resolve the intake blockers first: identify the core problem and accountable sponsor.");
+  }
+  if(assessment.gaps.length){
+    nextSteps.push("Review the important gaps with the requester and relevant stakeholders; assign an owner and target date to each agreed action.");
+  }
+  if(ownership.length){
+    nextSteps.push("Confirm accountable business, delivery, and operational owners before committing to a delivery approach.");
+  }
+  if(dependencies.some(x=>x.status!=="Requester-provided")){
+    nextSteps.push("Validate technical and cross-team dependencies, including owners, required inputs, and timing.");
+  }
+  if(missing("secReview")||["Unknown","Not needed"].includes(val("secReview"))){
+    nextSteps.push("Confirm whether security, privacy, and compliance reviews are required and identify the responsible reviewers.");
+  }
+  if(!nextSteps.length){
+    nextSteps.push("Bring the sponsor and relevant delivery, technical, security, and operational stakeholders together to validate assumptions, dependencies, capacity, and the proposed next decision.");
+  }
+  return {decisions:decisions,ownership:ownership,dependencies:dependencies,questions:questions,nextSteps:nextSteps};
+}
+
+function reportDate(){
+  const d=new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function provided(id,label){
+  const v=val(id);
+  return v&&!isUnk(v)?v:"Not provided";
+}
+function buildModel(){
+  const assessment=buildAssessment();
+  const decisionSupport=buildDecisionSupport(assessment);
+  const sections=STEPS.map(s=>({
+    h:s.title==="Request basics"?"Request":s.title,
+    items:s.fields.filter(f=>!f.header).map(f=>[f.name,val(f.id)])
+  }));
+  const open=ALL.filter(f=>isUnk(val(f.id))).map(f=>{
+    const o=val(f.id+"_owner");return f.name+(o?" (ask "+o+")":" (no owner named)");
+  });
+  const decisionItems=[];
+  assessment.blockers.forEach(x=>decisionItems.push({type:"Blocker",text:x.text,stepIndex:x.f.stepIndex}));
+  assessment.gaps.forEach(x=>decisionItems.push({type:"Clarification",text:x.text,stepIndex:x.f.stepIndex}));
+  const executiveFacts=[
+    ["Problem",provided("problem")],
+    ["Affected users",provided("affected")],
+    ["Desired outcome",provided("outcome")],
+    ["Success measure",provided("metrics")],
+    ["Strategic goal",provided("goals")]
+  ];
+  const executiveParts=[];
+  if(provided("problem")!=="Not provided")executiveParts.push("The request seeks to address: "+val("problem"));
+  if(provided("affected")!=="Not provided")executiveParts.push("The issue affects: "+val("affected"));
+  if(provided("outcome")!=="Not provided")executiveParts.push("The intended outcome is: "+val("outcome"));
+  if(provided("metrics")!=="Not provided")executiveParts.push("Success is expected to be measured by: "+val("metrics"));
+  const executiveSummary=executiveParts.length?executiveParts.join(" "):"The request does not yet contain enough business context for an executive summary. Clarify the problem, affected users, and intended outcome.";
+  return {
+    title:val("title")||"Untitled request",
+    summary:provided("summary"),executiveSummary:executiveSummary,
+    reportDate:reportDate(),
+    submitted:provided("date"),
+    requester:provided("requester"),
+    sponsor:provided("sponsor"),
+    targetDate:provided("targetDate"),
+    deadlineType:provided("deadlineType"),
+    status:assessment.status,cls:assessment.cls,reason:assessment.reason,
+    blockers:assessment.blockers,gaps:assessment.gaps,
+    suggestions:assessment.suggestions,recommendations:assessment.recommendations,
+    decisionItems:decisionItems,executiveFacts:executiveFacts,
+    sections:sections,open:open,decisionSupport:decisionSupport
+  };
+}
+function toMarkdown(m){
+  const L=[];
+  L.push("# "+m.title,"");
+  L.push("**TPM Intake Assessment**  ","**Prepared:** "+m.reportDate+"  ","**Submitted:** "+m.submitted,"");
+  L.push("> This report separates information supplied by the requester from assessment findings and follow-up recommendations. It is an intake aid, not an approval or authorization to begin delivery.","");
+  L.push("## Executive summary","");
+  L.push(m.executiveSummary,"");
+  L.push("## Decision snapshot","");
+  L.push("- **Intake status:** "+m.status);
+  L.push("- **Requester:** "+m.requester);
+  L.push("- **Sponsor:** "+m.sponsor);
+  L.push("- **Target date:** "+m.targetDate);
+  L.push("- **Deadline type:** "+m.deadlineType);
+  L.push("- **Blockers:** "+m.blockers.length);
+  L.push("- **Important gaps:** "+m.gaps.length);
+  L.push("- **Suggestions:** "+m.suggestions.length,"");
+  L.push("## Business context","");
+  m.executiveFacts.forEach(x=>L.push("- **"+x[0]+":** "+x[1]));
+  L.push("","## TPM assessment","");
+  function addFindings(title,items){
+    L.push("### "+title,"");
+    if(items.length)items.forEach((x,i)=>L.push((i+1)+". "+x.text));
+    else L.push("- None identified.");
+    L.push("");
+  }
+  addFindings("Blockers",m.blockers);
+  addFindings("Important gaps",m.gaps);
+  addFindings("Suggestions",m.suggestions);
+  L.push("## Decisions and clarifications required","");
+  if(m.decisionItems.length){
+    m.decisionItems.forEach((x,i)=>L.push((i+1)+". **"+x.type+":** "+x.text));
+  }else L.push("- No blockers or important gaps identified by the current checks.");
+  L.push("","## Recommended next steps","");
+  m.recommendations.concat(m.decisionSupport.nextSteps).forEach((x,i)=>L.push((i+1)+". "+x));
+  L.push("","## Decisions requiring attention","");
+  if(m.decisionSupport.decisions.length){
+    m.decisionSupport.decisions.forEach((x,i)=>{
+      L.push((i+1)+". **"+x.title+"**");
+      L.push("   - **Suggested decision owner:** "+x.owner);
+      L.push("   - **Information needed:** "+x.information);
+      L.push("   - **Why this is flagged:** "+x.trigger);
+    });
+  }else L.push("- No specific decision gaps were identified by the current checks.");
+  L.push("","## Ownership gaps","");
+  if(m.decisionSupport.ownership.length){
+    m.decisionSupport.ownership.forEach((x,i)=>L.push((i+1)+". **"+x.role+" — "+x.status+"**: "+x.detail+" Follow-up: "+x.followup));
+  }else L.push("- No ownership gaps were identified by the current checks. Confirm ownership with stakeholders.");
+  L.push("","## Dependencies to validate","");
+  m.decisionSupport.dependencies.forEach((x,i)=>L.push((i+1)+". **"+x.status+":** "+x.detail+" Follow-up: "+x.followup));
+  L.push("","## Stakeholder discussion questions","");
+  m.decisionSupport.questions.forEach((x,i)=>L.push((i+1)+". **"+x.group+":** "+x.question+" ("+x.reason+")"));
+  const reportGroups=[
+    {title:"Scope and outcomes",steps:["Scope","Value and success"]},
+    {title:"People and ownership",steps:["People"]},
+    {title:"Technical and operational context",steps:["Requirements","Technical context"]},
+    {title:"Security and compliance",steps:["Security and compliance"]},
+    {title:"Timeline and delivery",steps:["Timeline and resources","Risks and rollout"]}
+  ];
+  reportGroups.forEach(g=>{
+    L.push("","## "+g.title,"");
+    m.sections.filter(s=>g.steps.includes(s.h)).forEach(s=>{
+      s.items.forEach(it=>L.push("- **"+it[0]+":** "+(it[1]||"Not provided")));
+    });
+  });
+  L.push("","## Open questions","");
+  if(m.open.length)m.open.forEach(o=>L.push("- "+o));else L.push("- None explicitly marked unknown.");
+  L.push("","## Complete intake record","");
+  m.sections.forEach(s=>{
+    L.push("### "+s.h,"");
+    s.items.forEach(it=>L.push("- **"+it[0]+":** "+(it[1]||"Not provided")));
+    L.push("");
+  });
+  L.push("---","","**Assessment limitation:** Findings are generated from the answers entered and transparent rule-based checks. They do not replace stakeholder review, technical discovery, security assessment, financial approval, or portfolio prioritization.");
+  return L.join("\n")+"\n";
+}
+async function copyText(text,btn){
+  const originalLabel=btn.textContent;
+  try{await navigator.clipboard.writeText(text);}
+  catch(e){
+    const t=el("textarea");t.value=text;document.body.append(t);t.select();
+    try{document.execCommand("copy");}catch(_){}
+    t.remove();
+  }
+  btn.textContent="Copied";
+  setTimeout(()=>{btn.textContent=originalLabel;},2000);
+}
+function download(m){
+  const slug=m.title.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"request";
+  const url=URL.createObjectURL(new Blob([toMarkdown(m)],{type:"text/markdown"}));
+  const a=el("a",{href:url,download:"intake-"+slug+".md"});
+  document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function xmlEscape(value){
+  return String(value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;");
+}
+function markdownRuns(text){
+  const runs=[];
+  const re=/\*\*(.+?)\*\*/g;
+  let last=0,match;
+  while((match=re.exec(text))){
+    if(match.index>last)runs.push('<w:r><w:t xml:space="preserve">'+xmlEscape(text.slice(last,match.index))+'</w:t></w:r>');
+    runs.push('<w:r><w:rPr><w:b/></w:rPr><w:t xml:space="preserve">'+xmlEscape(match[1])+'</w:t></w:r>');
+    last=re.lastIndex;
+  }
+  if(last<text.length)runs.push('<w:r><w:t xml:space="preserve">'+xmlEscape(text.slice(last))+'</w:t></w:r>');
+  return runs.join("");
+}
+function markdownToWordXml(markdown){
+  const paragraphs=[];
+  markdown.split(/\r?\n/).forEach(line=>{
+    if(!line.trim()||line.trim()==="---")return;
+    let text=line,style="Normal",prefix="";
+    if(/^###\s/.test(line)){style="Heading2";text=line.replace(/^###\s*/,"");}
+    else if(/^##\s/.test(line)){style="Heading1";text=line.replace(/^##\s*/,"");}
+    else if(/^#\s/.test(line)){style="Title";text=line.replace(/^#\s*/,"");}
+    else if(/^>\s?/.test(line)){style="Quote";text=line.replace(/^>\s?/,"");}
+    else if(/^\s*[-*]\s+/.test(line)){style="ListParagraph";text="•  "+line.replace(/^\s*[-*]\s+/,"");}
+    else if(/^\s*\d+\.\s+/.test(line)){style="ListParagraph";text=line.replace(/^\s*/,"");}
+    paragraphs.push('<w:p><w:pPr><w:pStyle w:val="'+style+'"/></w:pPr>'+markdownRuns(text)+'</w:p>');
+  });
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+paragraphs.join("")+ 
+    '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1080" w:right="1080" w:bottom="1080" w:left="1080" w:header="540" w:footer="540" w:gutter="0"/></w:sectPr></w:body></w:document>';
+}
+function makeStoredZip(files){
+  const encoder=new TextEncoder(),local=[],central=[];
+  let offset=0;
+  const crcTable=makeCrcTable();
+  function crc32(bytes){let c=0xffffffff;for(let i=0;i<bytes.length;i++)c=crcTable[(c^bytes[i])&255]^(c>>>8);return (c^0xffffffff)>>>0;}
+  function u16(n){return new Uint8Array([n&255,(n>>>8)&255]);}
+  function u32(n){return new Uint8Array([n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255]);}
+  function join(parts){const size=parts.reduce((n,a)=>n+a.length,0),out=new Uint8Array(size);let at=0;parts.forEach(a=>{out.set(a,at);at+=a.length;});return out;}
+  files.forEach(file=>{
+    const name=encoder.encode(file.name),data=encoder.encode(file.content),crc=crc32(data);
+    const header=join([u32(0x04034b50),u16(20),u16(0x0800),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),name]);
+    local.push(header,data);
+    const c=join([u32(0x02014b50),u16(20),u16(20),u16(0x0800),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(offset),name]);
+    central.push(c);offset+=header.length+data.length;
+  });
+  const centralBytes=join(central),localBytes=join(local);
+  const end=join([u32(0x06054b50),u16(0),u16(0),u16(files.length),u16(files.length),u32(centralBytes.length),u32(localBytes.length),u16(0)]);
+  return join([localBytes,centralBytes,end]);
+}
+function makeCrcTable(){
+  const table=new Uint32Array(256);
+  for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?(0xedb88320^(c>>>1)):(c>>>1);table[n]=c>>>0;}
+  return table;
+}
+function downloadDocx(m){
+  const title=xmlEscape(m.title);
+  const documentXml=markdownToWordXml(toMarkdown(m));
+  const styles='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+    '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'+
+    '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr><w:pPr><w:spacing w:after="120" w:line="276" w:lineRule="auto"/></w:pPr></w:style>'+
+    '<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:rPr><w:b/><w:sz w:val="36"/><w:color w:val="1D5F6B"/></w:rPr><w:pPr><w:spacing w:before="0" w:after="240"/></w:pPr></w:style>'+
+    '<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:rPr><w:b/><w:sz w:val="28"/><w:color w:val="1D5F6B"/></w:rPr><w:pPr><w:keepNext/><w:spacing w:before="300" w:after="120"/></w:pPr></w:style>'+
+    '<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:rPr><w:b/><w:sz w:val="24"/></w:rPr><w:pPr><w:keepNext/><w:spacing w:before="200" w:after="80"/></w:pPr></w:style>'+
+    '<w:style w:type="paragraph" w:styleId="Quote"><w:name w:val="Quote"/><w:basedOn w:val="Normal"/><w:rPr><w:i/><w:color w:val="566872"/></w:rPr><w:pPr><w:ind w:left="360"/><w:spacing w:after="180"/></w:pPr></w:style>'+
+    '<w:style w:type="paragraph" w:styleId="ListParagraph"><w:name w:val="List Paragraph"/><w:basedOn w:val="Normal"/><w:pPr><w:ind w:left="360"/><w:spacing w:after="80"/></w:pPr></w:style></w:styles>';
+  const files=[
+    {name:"[Content_Types].xml",content:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>'},
+    {name:"_rels/.rels",content:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'},
+    {name:"word/document.xml",content:documentXml},
+    {name:"word/styles.xml",content:styles},
+    {name:"word/_rels/document.xml.rels",content:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'}
+  ];
+  const zip=makeStoredZip(files),slug=m.title.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"request";
+  const url=URL.createObjectURL(new Blob([zip],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}));
+  const a=el("a",{href:url,download:"intake-"+slug+".docx"});document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+
+function reportStat(label,value){
+  return el("div",{class:"report-stat"},
+    el("span",{class:"k",text:label}),
+    el("span",{class:"v",text:value})
+  );
+}
+function reportFieldList(items){
+  const dl=el("dl");
+  items.forEach(it=>{
+    dl.append(el("dt",{text:it[0]}),el("dd",{class:it[1]&&it[1]!=="Not provided"?"":"none",text:it[1]||"Not provided"}));
+  });
+  return dl;
+}
+function reportFindingSection(title,items,emptyText){
+  return el("section",{class:"report-section"},
+    el("h3",{text:title}),
+    items.length?el("ol",{class:"report-list"},items.map(x=>
+      el("li",{},x.text,el("button",{type:"button",class:"link fix",text:"Review answer",onclick:()=>go(x.f.stepIndex)})))):
+      el("p",{class:"report-empty",text:emptyText})
+  );
+}
+function renderAssessment(){
+  const m=buildModel();
+  const summary=el("section",{class:"report-panel"},
+    el("h3",{text:"Assessment overview"}),
+    el("p",{text:m.reason}),
+    el("div",{class:"report-grid"},
+      reportStat("Blockers",String(m.blockers.length)),
+      reportStat("Important gaps",String(m.gaps.length)),
+      reportStat("Suggestions",String(m.suggestions.length)),
+      reportStat("Decisions to review",String(m.decisionSupport.decisions.length))
+    )
+  );
+  main.append(
+    el("p",{class:"meta",text:"STEP 11 OF 12"}),
+    el("div",{class:"bar"},el("span",{style:"width:91.7%"})),
+    el("div",{class:"verdict "+m.cls},
+      el("p",{class:"label",text:"Intake assessment"}),
+      el("h2",{text:m.status}),
+      el("p",{text:m.reason})
+    ),
+    summary,
+    reportFindingSection("Blockers",m.blockers,"No critical blockers identified by the current checks."),
+    reportFindingSection("Important gaps",m.gaps,"No important gaps identified by the current checks."),
+    reportFindingSection("Suggestions",m.suggestions,"No additional suggestions identified."),
+    el("section",{class:"report-section"},
+      el("h3",{text:"Decisions and clarifications required"}),
+      m.decisionItems.length
+        ?el("ol",{class:"report-list"},m.decisionItems.map(x=>el("li",{},el("strong",{text:x.type+": "}),x.text)))
+        :el("p",{class:"report-empty",text:"No blockers or important gaps identified by the current checks. Stakeholder review may still be required."})
+    ),
+    el("section",{class:"report-section"},
+      el("h3",{text:"Recommended next steps"}),
+      el("ol",{class:"report-list"},m.recommendations.concat(m.decisionSupport.nextSteps).map(x=>el("li",{text:x})))
+    ),
+    el("div",{class:"actions"},
+      el("button",{type:"button",class:"btn secondary",text:"Back to intake",onclick:()=>go(N-1)}),
+      el("button",{type:"button",class:"btn",text:"Continue to Report & Downloads",onclick:()=>go(N+1)})
+    )
+  );
+}
+
+function renderSummary(){
+  const m=buildModel();
+  const copyBtn=el("button",{type:"button",class:"btn",text:"Copy executive report"});
+  copyBtn.addEventListener("click",()=>copyText(toMarkdown(m),copyBtn));
+  const report=el("article",{class:"doc"},
+    el("p",{class:"meta",text:"TPM INTAKE ASSESSMENT  •  PREPARED "+m.reportDate}),
+    el("h2",{text:m.title}),
+    el("p",{class:"report-intro",text:m.summary==="Not provided"?"Request summary not provided.":m.summary}),
+    el("div",{class:"report-note",text:"This report distinguishes requester-provided information from rule-based assessment findings and recommended follow-up. Ready for Triage does not mean the initiative is approved, funded, prioritized, or ready for execution."}),
+    el("section",{class:"report-panel"},
+      el("h3",{text:"Executive summary"}),
+      el("p",{text:m.executiveSummary}),
+      el("p",{text:"The request is currently assessed as "+m.status.toLowerCase()+". "+m.reason})
+    ),
+    el("section",{class:"report-section"},
+      el("h3",{text:"Decision snapshot"}),
+      el("div",{class:"report-grid"},
+        reportStat("Intake status",m.status),
+        reportStat("Requester",m.requester),
+        reportStat("Sponsor",m.sponsor),
+        reportStat("Target date",m.targetDate),
+        reportStat("Deadline type",m.deadlineType),
+        reportStat("Date submitted",m.submitted),
+        reportStat("Blockers",String(m.blockers.length)),
+        reportStat("Important gaps",String(m.gaps.length))
+      )
+    ),
+    el("section",{class:"report-section"},
+      el("h3",{text:"Business context"}),
+      reportFieldList(m.executiveFacts)
+    ),
+    el("section",{class:"report-section"},
+      el("h3",{text:"TPM assessment"}),
+      el("p",{class:"hint",text:"The findings below are generated by transparent checks against the information entered. They are prompts for review, not automated approval decisions."})
+    ),
+    reportFindingSection("Blockers",m.blockers,"No critical blockers identified by the current checks."),
+    reportFindingSection("Important gaps",m.gaps,"No important gaps identified by the current checks."),
+    reportFindingSection("Suggestions",m.suggestions,"No additional suggestions identified."),
+    el("section",{class:"report-section"},
+      el("h3",{text:"Decisions and clarifications required"}),
+      m.decisionItems.length?el("ol",{class:"report-list"},m.decisionItems.map(x=>el("li",{},el("strong",{text:x.type+": "}),x.text))):
+        el("p",{class:"report-empty",text:"No blockers or important gaps identified by the current checks. Stakeholder and portfolio review may still be required."})
+    ),
+    el("section",{class:"report-section"},
+      el("h3",{text:"Recommended next steps"}),
+      el("ol",{class:"report-list"},m.recommendations.concat(m.decisionSupport.nextSteps).map(x=>el("li",{text:x})))
+    ),
+    el("section",{class:"report-section"},
+      el("h3",{text:"Decisions requiring attention"}),
+      m.decisionSupport.decisions.length
+        ?el("ol",{class:"report-list"},m.decisionSupport.decisions.map(x=>el("li",{},
+          el("strong",{text:x.title}),
+          el("p",{text:"Suggested decision owner: "+x.owner}),
+          el("p",{text:"Information needed: "+x.information}),
+          el("p",{class:"report-empty",text:"Why this is flagged: "+x.trigger})
+        )))
+        :el("p",{class:"report-empty",text:"No specific decision gaps were identified by the current checks. Stakeholder review may still identify decisions."})
+    ),
+    el("section",{class:"report-section"},
+      el("h3",{text:"Ownership gaps"}),
+      m.decisionSupport.ownership.length
+        ?el("ol",{class:"report-list"},m.decisionSupport.ownership.map(x=>el("li",{},
+          el("strong",{text:x.role+" — "+x.status}),
+          el("p",{text:x.detail}),
+          el("p",{class:"report-empty",text:"Follow-up: "+x.followup})
+        )))
+        :el("p",{class:"report-empty",text:"No ownership gaps were identified by the current checks. Confirm ownership with stakeholders."})
+    ),
+    el("section",{class:"report-section"},
+      el("h3",{text:"Dependencies to validate"}),
+      el("ol",{class:"report-list"},m.decisionSupport.dependencies.map(x=>el("li",{},
+        el("strong",{text:x.status}),
+        el("p",{text:x.detail}),
+        el("p",{class:"report-empty",text:"Follow-up: "+x.followup})
+      )))
+    ),
+    el("section",{class:"report-section"},
+      el("h3",{text:"Stakeholder discussion questions"}),
+      el("p",{class:"hint",text:"Use these questions to guide discussion. They are generated from missing, unknown, or requester-provided information and are not evidence that an issue exists."}),
+      el("ol",{class:"report-list"},m.decisionSupport.questions.map(x=>el("li",{},
+        el("strong",{text:x.group+": "}),x.question,
+        el("p",{class:"report-empty",text:"Reason: "+x.reason})
+      )))
+    )
+  );
+  const reportGroups=[
+    {title:"Scope and outcomes",steps:["Scope","Value and success"]},
+    {title:"People and ownership",steps:["People"]},
+    {title:"Technical and operational context",steps:["Requirements","Technical context"]},
+    {title:"Security and compliance",steps:["Security and compliance"]},
+    {title:"Timeline and delivery",steps:["Timeline and resources","Risks and rollout"]}
+  ];
+  reportGroups.forEach(g=>{
+    const relevant=m.sections.filter(s=>g.steps.includes(s.h));
+    const section=el("section",{class:"report-section"},
+      el("h3",{text:g.title}),
+      relevant.map(s=>el("div",{},
+        el("p",{class:"report-subhead",text:s.h}),
+        reportFieldList(s.items)
+      ))
+    );
+    report.append(section);
+  });
+  report.append(
+    el("section",{class:"report-section"},
+      el("h3",{text:"Open questions"}),
+      m.open.length?el("ul",{class:"report-list"},m.open.map(o=>el("li",{text:o}))):
+        el("p",{class:"report-empty",text:"No fields were explicitly marked unknown."})
+    ),
+    el("section",{class:"report-section"},
+      el("h3",{text:"Complete intake record"}),
+      m.sections.map(s=>el("div",{},
+        el("p",{class:"report-subhead",text:s.h}),
+        reportFieldList(s.items)
+      ))
+    ),
+    el("p",{class:"report-note",text:"Assessment limitation: Findings are generated from the answers entered and transparent rule-based checks. They do not replace stakeholder review, technical discovery, security assessment, financial approval, or portfolio prioritization."})
+  );
+  main.append(
+    el("p",{class:"meta",text:"STEP 12 OF 12 · REPORT & DOWNLOADS"}),
+    el("div",{class:"bar"},el("span",{style:"width:100%"})),
+    el("div",{class:"toolbar"},
+      el("button",{type:"button",class:"btn secondary",text:"Back to Assessment",onclick:()=>go(N)}),
+      copyBtn,
+      el("button",{type:"button",class:"btn secondary",text:"Download report (.md)",onclick:()=>download(m)}),
+      el("button",{type:"button",class:"btn secondary",text:"Download report (.docx)",onclick:()=>downloadDocx(m)}),
+      el("button",{type:"button",class:"btn secondary",text:"Edit answers",onclick:()=>go(0)}),
+      el("button",{type:"button",class:"btn secondary",text:"Print report",onclick:()=>window.print()})
+    ),
+    report
+  );
+}
+
+/* ---------- Render ---------- */
+function render(){
+  refreshNav();
+  main.replaceChildren();
+  if(state.step<N)renderStep();
+  else if(state.step===N)renderAssessment();
+  else renderSummary();
+}
+render();
+})();
+</script>
+</body>
+</html>
