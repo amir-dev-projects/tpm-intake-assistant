@@ -296,8 +296,9 @@ function stepFlags(i,includeEmpty){
 const stepsEl=$("#steps");
 const navItems=[];
 STEPS.concat([{title:"Assessment"}]).forEach((s,i)=>{
+  const status=el("span",{class:"nav-status",text:"Not started"});
   const b=el("button",{type:"button",class:"item",onclick:()=>{go(i);$("#nav").classList.remove("open");$("#jump").setAttribute("aria-expanded","false");}},
-    el("span",{class:"n",text:String(i+1)}),el("span",{text:s.title}));
+    el("span",{class:"n",text:String(i+1)}),el("span",{text:s.title}),status);
   const li=el("li",{},b);
   stepsEl.append(li);navItems.push({li:li,b:b,status:status});
 });
@@ -406,6 +407,16 @@ function renderStep(){
     el("div",{class:"bar"},el("span",{style:"width:"+Math.round((i+1)/N*100)+"%"})),
     el("h2",{text:s.title}),
     el("p",{class:"intro",text:s.intro}),
+    el("div",{class:"progress-summary","aria-live":"polite"},
+      el("p",{class:"progress-copy"},
+        el("strong",{id:"overall-progress-text",text:""}),
+        el("span",{text:"Overall intake progress"})
+      ),
+      el("div",{class:"progress-track","aria-hidden":"true"},
+        el("span",{id:"overall-progress-fill",style:"width:0%"})
+      ),
+      el("p",{class:"section-progress",id:"section-progress",text:""})
+    ),
     ...s.fields.map(fieldEl),
     gate,
     el("div",{class:"actions"},
