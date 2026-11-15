@@ -1,93 +1,322 @@
-# tpm-intake-assistant
-To assist TPM's during the request or requirement intake process.
+# TPM Intake Assistant
 
-# Project request intake
+I built the TPM Intake Assistant to make the early stage of project
+intake more structured and useful. It helps me understand a project
+request, identify what is missing, and prepare for the conversations and
+decisions that need to happen before a request moves forward.
 
-A short guided form I built for collecting requirements on new project requests. You answer a few questions at a time, it flags answers that are too vague, and at the end it gives you a summary and a readiness rating.
+I wanted something practical and easy to use. I also wanted to keep it
+simple: no account, no backend, no paid service, and no external API.
+The application runs in the browser, and the information stays in the
+browser where the intake was created.
 
-Live page: https://amir-dev-projects.github.io/tpm-intake-assistant/
+**Live application:** [Open TPM Intake
+Assistant](https://amir-dev-projects.github.io/tpm-intake-assistant/)  
+**GitHub repository:**
+[amir-dev-projects/tpm-intake-assistant](https://github.com/amir-dev-projects/tpm-intake-assistant)
 
-It runs in your browser. Nothing you type is sent anywhere.
+------------------------------------------------------------------------
 
-## Why I made it
+## Why I built it
 
-I'm a technical program manager. When requests come into a project funnel, the first conversation is usually spent figuring out basics that should have been written down already. In my experience the same things go wrong a lot:
+In my experience, a project request can arrive before the problem is
+properly understood. The initial information may be limited, and
+important questions are often still open.
 
-- The request is a solution ("we need a dashboard") with no problem behind it.
-- "Success" has no number, so nobody can say later whether it worked.
-- There's a deadline but nobody knows what's driving it.
-- No sponsor is named.
-- Security and data questions come up late, after the scope is set.
+What problem are we trying to solve? Who is affected? What would success
+look like? Who is responsible for the decision? Are there technical
+dependencies, security concerns, deadlines, or resource constraints?
 
-I wanted requesters to do a first pass on their own, in a consistent format, so my time with them goes to the parts that need a person.
+I built this application to bring those questions into one place. I
+wanted the intake to guide a useful conversation, not just collect
+answers in a form. It should help me see what we know, what we don’t
+know yet, who can help clarify it, and what needs attention next.
 
-## How I use it
+My intention is not to replace TPM judgment or stakeholder discussions.
+I use the application to prepare for those discussions and make them
+more focused.
 
-I run it with the requester, and they don't have to touch the form:
+## How I structured the intake
 
-1. We book a call, about 30 minutes. I explain what we're doing and why, and that "I don't know" is a fine answer.
-2. I share my screen and ask the questions in plain language. I type the answers in as we talk, so they can describe the request the way they'd explain it to a colleague.
-3. When an answer is vague, I ask for an example or a number and help them get to something clearer. When something is unknown, I write down who might know and take on finding out.
-4. At the end I read the summary back, and they tell me what I got wrong or missed.
-5. I send a short note with what we agreed, the open items I'm following up on, and when it goes to prioritization.
+I organized the application into 12 steps. The first ten steps collect
+information about the request. The last two help me assess the
+information and prepare a report.
 
-I own the process and the follow-up. The requester only has to tell me about the problem.
+| Step | Section                 | What I capture                                                                  |
+|------|-------------------------|---------------------------------------------------------------------------------|
+| 1    | Request basics          | Request title, requester, sponsor, submission date, and a short summary         |
+| 2    | Problem                 | The problem, who is affected, how it is handled today, and available evidence   |
+| 3    | Value and success       | Desired outcome, success measures, cost of inaction, and related business goals |
+| 4    | Scope                   | What is included, what is excluded, and what done should look like              |
+| 5    | People                  | Users, approvers, consulted stakeholders, and operational owners                |
+| 6    | Requirements            | Functional requirements, integrations, data, and non-functional needs           |
+| 7    | Security and compliance | Data classification, regulated data, and security review status                 |
+| 8    | Technical context       | Affected systems, dependencies, and build-or-buy considerations                 |
+| 9    | Timeline and resources  | Target date, reason for the date, budget, and committed people                  |
+| 10   | Risks and rollout       | Risks, assumptions, constraints, rollout, adoption, and support                 |
+| 11   | Assessment              | Readiness, blockers, important gaps, suggestions, and follow-up actions         |
+| 12   | Report & Downloads      | The complete report and options to copy, download, or print it                  |
 
-## What the page does
+### Making the intake easier to complete
 
-- Ten steps, each with a few questions: request basics, problem, value and success, scope, people, requirements, security and compliance, technical context, timeline and resources, and risks and rollout.
-- A "Don't know" button on open questions. It records "Unknown" and asks who can answer it. Those show up as open questions in the summary.
-- Flags on answers that look weak. They're suggestions. You can fix the answer or press Next again to move on.
-- A summary page with a readiness rating, the top three gaps, and everything the requester entered. You can copy it as Markdown, download it as a `.md` file, or print it.
-- Answers are saved in your browser, so a refresh won't lose them. "Start over" clears them.
+I added a few features to make the form easier to work through:
 
-## What gets flagged
+- **Progress tracking:** I can see how many required questions have been
+  addressed, both across the full intake and within the current section.
+  The navigation also shows which sections are complete or still in
+  progress.
+- **Example answers:** I added examples to selected questions to show
+  the type of detail that is useful.
+- **Don’t know option:** I don’t want people to guess when they don’t
+  have an answer. They can mark information as unknown and, where
+  useful, name a person or team who may be able to clarify it.
+- **Answer checks:** I added simple checks to highlight answers that may
+  need more detail. For example, the application can flag vague wording,
+  very short answers, a success measure without a number, or an answer
+  that describes a solution before explaining the problem.
+- **Flexible navigation:** I can move between sections, update answers,
+  and return to the assessment or report.
 
-The checks are simple pattern matching:
+These checks are there to prompt a better conversation. They are not
+meant to judge the requester or stop the intake from moving forward.
 
-- Vague words such as "asap", "improve", "better", "scalable", "everyone"
-- Success metrics with no number in them
-- A problem statement that starts like a solution ("we need", "build", "implement")
-- Very short answers
-- A hard deadline with no known driver
-- A target date that is already in the past
-- Confidential or regulated data with no security review planned
+## How I assess a request
 
-There is no AI inside this page. It matches words and patterns. It will miss some vague answers and sometimes flag a fine one, so I treat the flags as prompts to ask a better question, not as a verdict.
+I wanted the assessment to be clear and easy to understand. Instead of
+showing one score, I separate the findings into three groups:
 
-## Readiness rating
+- **Blockers:** Issues that prevent meaningful triage. For example, the
+  problem is not clear or there is no identified sponsor.
+- **Important gaps:** Information that still needs clarification before
+  the request can be evaluated with confidence.
+- **Suggestions:** Other areas where more detail could make the request
+  stronger.
 
-- **Ready:** every required question is answered and nothing is flagged.
-- **Needs more info:** something required is missing, unknown, or flagged. The summary lists the top three gaps.
-- **Not actionable:** there's no problem statement or no named sponsor. I won't start triage without both.
+I use three intake statuses:
 
-The rating is a rough screen. It doesn't say whether a project is a good idea or how big it is.
+| Status                  | How I interpret it                                                                           |
+|-------------------------|----------------------------------------------------------------------------------------------|
+| **Not actionable**      | The core problem or accountable sponsor is missing or unknown.                               |
+| **Needs clarification** | The problem and sponsor are identified, but important information still needs clarification. |
+| **Ready for Triage**    | The request contains the core information needed to begin triage.                            |
 
-## Privacy
+I use the wording **Ready for Triage** deliberately. It does not mean
+the project is approved, funded, prioritized, or ready to start
+delivery. It only means there is enough core information to begin a
+triage discussion.
 
-Everything runs in the browser, and answers are stored in that browser's local storage only. I still wouldn't paste confidential details into any web page you don't control. If you use this for real requests, host a copy inside your own organization.
+The assessment is based on required-field checks and straightforward
+pattern matching. I kept the rules visible and simple. They are not a
+substitute for reading the answers in context, and a person should
+always review the findings.
 
-## Using it yourself
+## TPM Decision Support
 
-It's a single file, `index.html`, with no dependencies. Open it in a browser, or host it with GitHub Pages.
+I wanted the application to do more than tell me whether information is
+missing. It should also help me work out what to do about it.
 
-To change the questions, open the file and find the `STEPS` list near the top of the script. Each question has a label, a short name for the summary, a type (text, long text, or dropdown), and whether it's required. You can reword, add, or remove questions without touching the rest. The flag rules are in the section marked "Checks".
+For that reason, I added decision-support sections to help me prepare
+the next conversation around a request.
 
-## Limits
+### Decisions requiring attention
 
-- It captures one person's view. For large or cross-team requests it doesn't replace talking to the other stakeholders.
-- The flags are keyword checks, as described above.
-- There's no server, so nothing is shared or collected for you. Requesters have to send you their summary.
-- I've tested it by clicking through it, not with a group of real requesters.
+I use this section to see which decisions may need stakeholder
+attention, who may be the right person to make or support the decision,
+and what information is still needed.
 
-## What I'd measure
+### Ownership gaps
 
-If I run this across a team, I'd track how long it takes to get from a new request to a clear scope, how many follow-up calls each request needs, how many requests arrive with a named sponsor and a measurable goal, and how often scope changes after intake. I'd also look at which questions people skip or get stuck on, and change those first.
+I use this section to check whether important responsibilities have been
+identified. This can include approvers, people who need to be consulted,
+the team that will operate the solution after launch, and teams needed
+to deliver the work.
 
-## How I built it
+A missing name in the intake does not necessarily mean that nobody owns
+the responsibility. It means I need to confirm it.
 
-I wrote the question list, the flag rules, and the readiness logic based on how I run intake. I used an AI assistant to help write the page itself, then tested it and fixed the problems I found.
+### Dependencies to validate
+
+I use this section to review dependencies and technical touchpoints
+captured in the request. It helps me identify what needs to be confirmed
+with other teams before making delivery assumptions.
+
+### Recommended next steps
+
+Based on the answers and assessment findings, the application prepares a
+set of suggested follow-up actions. These can relate to missing
+information, ownership, success measures, security review, dependencies,
+or stakeholder alignment.
+
+### Stakeholder discussion questions
+
+I also wanted to make it easier to prepare for conversations with
+different groups. The application creates questions for relevant
+stakeholders, such as the sponsor, product, engineering, security and
+privacy, delivery, and operations.
+
+I treat these as prompts, not decisions made on behalf of the
+stakeholders. The recommendations are based on the information entered
+in the intake. The application does not invent project facts, assign
+actual owners, approve funding, or decide which initiative should be
+prioritized.
+
+## The executive report
+
+The **Report & Downloads** page brings the intake information and
+assessment together in one place. This is one of the parts I wanted to
+get right because I need an output that is useful outside the
+application and can be shared in a stakeholder discussion.
+
+The report includes:
+
+- Executive summary and decision snapshot
+- Business context and information provided by the requester
+- Assessment findings: blockers, important gaps, and suggestions
+- Decisions and clarifications required
+- Recommended next steps
+- Decisions requiring attention
+- Ownership gaps and follow-up prompts
+- Dependencies to validate
+- Stakeholder discussion questions
+- Open questions
+- The complete intake record
+
+I kept the report structured so that it is easy to review and follow. It
+also makes a distinction between information supplied in the intake and
+findings or recommendations produced by the assessment.
+
+### Download and sharing options
+
+I added several ways to use the report:
+
+- **Copy executive report:** I can copy the report and use it in another
+  document or message.
+- **Download Markdown (.md):** I can save a Markdown version of the
+  report.
+- **Download Word (.docx):** I can download an editable Word document
+  and open it in Microsoft Word or Google Docs.
+- **Print report:** I can print the report or save it as a PDF through
+  the browser.
+
+The report files are generated in the browser using the current intake
+answers. I don’t need to send the information to an external
+document-generation service.
+
+## How I expect to use it
+
+I see this as a way to support the conversation between the requester
+and the TPM. I don’t expect every requester to know all the technical,
+security, operational, or delivery details at the beginning.
+
+A typical intake could work like this:
+
+1.  I start by understanding the request and the problem behind it.
+2.  I work through the questions with the requester and capture what is
+    known.
+3.  When an answer is unclear, I ask for an example, evidence, a number,
+    or more context.
+4.  If something is unknown, I record it as unknown rather than making
+    an assumption. I also identify who may be able to provide the
+    answer.
+5.  I review the assessment and use it to prepare the follow-up with the
+    sponsor and relevant teams.
+6.  I share the report so everyone has a common view of the request,
+    open questions, decisions, and next steps.
+
+For me, the value is not in completing every field. The value is in
+getting a clearer understanding of the request and knowing what needs to
+happen next.
+
+## Privacy and data handling
+
+I kept the application browser-based and local:
+
+- The application runs in the browser.
+- I use the browser’s `localStorage` to keep answers available after a
+  refresh in the same browser.
+- The application does not send intake answers to a server or external
+  API.
+- The **Start over** option clears the saved answers in that browser.
+- Reports are generated and downloaded on the user’s device.
+
+One important point: because the application is published through a
+public GitHub Pages site, I would not use it for confidential, personal,
+regulated, or company-sensitive information unless the organization has
+approved that use. For real organizational information, I would use an
+environment that meets the organization’s security and data-handling
+requirements.
+
+## Running it locally
+
+The application is a single HTML file.
+
+1.  Clone or download this repository.
+2.  Open `index.html` in a modern browser.
+3.  Start a new intake or continue an intake saved in that browser.
+
+I can also use the [live GitHub Pages
+application](https://amir-dev-projects.github.io/tpm-intake-assistant/).
+
+There is no build step, package installation, backend, or API key
+required.
+
+## Technology and implementation
+
+I built the application with:
+
+- HTML
+- CSS
+- Vanilla JavaScript
+- Browser `localStorage` for saving intake answers
+- Client-side generation of Markdown reports
+- Client-side generation of Word (`.docx`) reports
+
+I chose this approach to keep the application lightweight and easy to
+run. I didn’t want to introduce a backend or depend on paid services for
+something that can run in the browser.
+
+I designed the intake structure, the questions, the assessment
+categories, the readiness rules, and the decision-support flow around
+the way I think a TPM should approach an early project request.
+
+## Current scope and limitations
+
+I have intentionally kept this version focused on one project request at
+a time. It is an intake and decision-support tool, not a portfolio
+management system.
+
+At this stage, it does not:
+
+- Compare multiple initiatives or calculate portfolio rankings.
+- Decide whether a request should be funded, approved, or prioritized.
+- Replace sponsor decisions or stakeholder discussions.
+- Replace technical discovery, security or privacy reviews, or financial
+  approval.
+- Verify whether the information entered by a requester is accurate.
+- Provide shared storage, multi-user collaboration, or centralized
+  administration.
+
+The intake is saved in one browser. When a request involves several
+teams, I still need to validate the information with the people
+responsible for those areas.
+
+## What I would like to learn from using it
+
+If I use this application with a team, I would be interested in
+understanding whether it helps:
+
+- Reduce the time needed to clarify a new request.
+- Reduce the number of follow-up conversations needed to collect basic
+  information.
+- Improve how often requests have a named sponsor and a measurable
+  outcome.
+- Identify scope questions and dependencies earlier.
+- Show which questions are difficult for requesters to answer, so I can
+  improve the intake.
+
+These are areas I would like to observe and measure. I haven’t presented
+them as results or benefits already achieved.
 
 ## License
 
-MIT. Use it, change it, share it.
+This project is licensed under the [MIT License](LICENSE).
