@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Project request intake</title>
-<meta name="description" content="A guided intake form that flags vague answers and builds a requirements summary with a readiness rating. Runs entirely in the browser.">
+<meta name="description" content="A guided project intake tool that assesses readiness and creates a structured TPM executive report. Runs entirely in the browser.">
 <style>
 :root{
   --bg:#F3F5F6; --surface:#FFFFFF; --ink:#17252D; --muted:#566872; --line:#D3DBDF;
@@ -86,6 +86,23 @@ textarea{min-height:84px;resize:vertical}
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 26px}
 .doc h3{font:600 1.15rem/1.3 var(--serif);margin:26px 0 8px;padding-top:14px;border-top:1px solid var(--line)}
 .doc .lead{font-size:1.05rem;margin:0 0 4px;white-space:pre-wrap}
+.report-intro{margin:0 0 22px;color:var(--muted);max-width:72ch}
+.report-panel{border:1px solid var(--line);border-radius:5px;padding:16px 18px;margin:0 0 18px;min-width:0}
+.report-panel h3{font:600 1.12rem/1.3 var(--serif);margin:0 0 10px}
+.report-panel p{margin:0 0 8px}
+.report-panel p:last-child{margin-bottom:0}
+.report-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 18px}
+.report-stat{background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:12px}
+.report-stat .k{display:block;color:var(--muted);font-size:.82rem;margin-bottom:3px}
+.report-stat .v{display:block;font-weight:650;overflow-wrap:anywhere}
+.report-note{background:var(--bg);border-left:3px solid var(--accent);padding:11px 13px;color:var(--muted);font-size:.9rem;margin:16px 0 22px}
+.report-list{margin:0;padding-left:20px}
+.report-list li{margin:0 0 7px}
+.report-section{margin:24px 0 0}
+.report-section>h3{font:600 1.18rem/1.3 var(--serif);margin:0 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+.report-subhead{font-weight:650;margin:14px 0 6px}
+.report-empty{color:var(--muted);font-style:italic}
+@media(max-width:560px){.report-grid{grid-template-columns:minmax(0,1fr)}}
 dl{margin:0;display:grid;grid-template-columns:190px minmax(0,1fr);gap:8px 18px}
 dt{color:var(--muted);font-size:.9rem}
 dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -383,7 +400,7 @@ function fieldEl(f){
 function renderStep(){
   const i=state.step,s=STEPS[i];
   const gate=el("p",{class:"gate",id:"gate",hidden:true,text:"Flags are suggestions. Fix them, or press Next again to continue."});
-  const nextBtn=el("button",{type:"button",class:"btn",text:i===N-1?"Build summary":"Next",onclick:next});
+  const nextBtn=el("button",{type:"button",class:"btn",text:i===N-1?"Build executive report":"Next",onclick:next});
   main.append(
     el("p",{class:"meta",text:"Step "+(i+1)+" of "+N}),
     el("div",{class:"bar"},el("span",{style:"width:"+Math.round((i+1)/N*100)+"%"})),
@@ -462,6 +479,14 @@ function buildAssessment(){
   if(!recommendations.length)recommendations.push("Confirm the appropriate triage participants and evaluate strategic fit, priority, capacity, dependencies, and delivery options.");
   return {status:status,cls:cls,reason:reason,blockers:blockers,gaps:gaps,suggestions:suggestions,recommendations:recommendations};
 }
+function reportDate(){
+  const d=new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function provided(id,label){
+  const v=val(id);
+  return v&&!isUnk(v)?v:"Not provided";
+}
 function buildModel(){
   const assessment=buildAssessment();
   const sections=STEPS.map(s=>({
@@ -471,36 +496,98 @@ function buildModel(){
   const open=ALL.filter(f=>isUnk(val(f.id))).map(f=>{
     const o=val(f.id+"_owner");return f.name+(o?" (ask "+o+")":" (no owner named)");
   });
-  return {title:val("title")||"Untitled request",summary:val("summary"),
+  const decisionItems=[];
+  assessment.blockers.forEach(x=>decisionItems.push({type:"Blocker",text:x.text,stepIndex:x.f.stepIndex}));
+  assessment.gaps.forEach(x=>decisionItems.push({type:"Clarification",text:x.text,stepIndex:x.f.stepIndex}));
+  const executiveFacts=[
+    ["Problem",provided("problem")],
+    ["Affected users",provided("affected")],
+    ["Desired outcome",provided("outcome")],
+    ["Success measure",provided("metrics")],
+    ["Strategic goal",provided("goals")]
+  ];
+  const executiveParts=[];
+  if(provided("problem")!=="Not provided")executiveParts.push("The request seeks to address: "+val("problem"));
+  if(provided("affected")!=="Not provided")executiveParts.push("The issue affects: "+val("affected"));
+  if(provided("outcome")!=="Not provided")executiveParts.push("The intended outcome is: "+val("outcome"));
+  if(provided("metrics")!=="Not provided")executiveParts.push("Success is expected to be measured by: "+val("metrics"));
+  const executiveSummary=executiveParts.length?executiveParts.join(" "):"The request does not yet contain enough business context for an executive summary. Clarify the problem, affected users, and intended outcome.";
+  return {
+    title:val("title")||"Untitled request",
+    summary:provided("summary"),executiveSummary:executiveSummary,
+    reportDate:reportDate(),
+    submitted:provided("date"),
+    requester:provided("requester"),
+    sponsor:provided("sponsor"),
+    targetDate:provided("targetDate"),
+    deadlineType:provided("deadlineType"),
     status:assessment.status,cls:assessment.cls,reason:assessment.reason,
     blockers:assessment.blockers,gaps:assessment.gaps,
     suggestions:assessment.suggestions,recommendations:assessment.recommendations,
-    sections:sections,open:open};
+    decisionItems:decisionItems,executiveFacts:executiveFacts,
+    sections:sections,open:open
+  };
 }
 function toMarkdown(m){
   const L=[];
   L.push("# "+m.title,"");
-  if(m.summary)L.push(m.summary,"");
-  L.push("## Assessment","","**"+m.status+".** "+m.reason);
+  L.push("**TPM Intake Assessment**  ","**Prepared:** "+m.reportDate+"  ","**Submitted:** "+m.submitted,"");
+  L.push("> This report separates information supplied by the requester from assessment findings and follow-up recommendations. It is an intake aid, not an approval or authorization to begin delivery.","");
+  L.push("## Executive summary","");
+  L.push(m.executiveSummary,"");
+  L.push("## Decision snapshot","");
+  L.push("- **Intake status:** "+m.status);
+  L.push("- **Requester:** "+m.requester);
+  L.push("- **Sponsor:** "+m.sponsor);
+  L.push("- **Target date:** "+m.targetDate);
+  L.push("- **Deadline type:** "+m.deadlineType);
+  L.push("- **Blockers:** "+m.blockers.length);
+  L.push("- **Important gaps:** "+m.gaps.length);
+  L.push("- **Suggestions:** "+m.suggestions.length,"");
+  L.push("## Business context","");
+  m.executiveFacts.forEach(x=>L.push("- **"+x[0]+":** "+x[1]));
+  L.push("","## TPM assessment","");
   function addFindings(title,items){
-    if(!items.length)return;
-    L.push("","### "+title,"");
-    items.forEach((x,i)=>L.push((i+1)+". "+x.text));
+    L.push("### "+title,"");
+    if(items.length)items.forEach((x,i)=>L.push((i+1)+". "+x.text));
+    else L.push("- None identified.");
+    L.push("");
   }
   addFindings("Blockers",m.blockers);
   addFindings("Important gaps",m.gaps);
   addFindings("Suggestions",m.suggestions);
-  L.push("","### Recommended next steps","");
+  L.push("## Decisions and clarifications required","");
+  if(m.decisionItems.length){
+    m.decisionItems.forEach((x,i)=>L.push((i+1)+". **"+x.type+":** "+x.text));
+  }else L.push("- No blockers or important gaps identified by the current checks.");
+  L.push("","## Recommended next steps","");
   m.recommendations.forEach((x,i)=>L.push((i+1)+". "+x));
-  m.sections.forEach(s=>{
-    L.push("","## "+s.h,"");
-    s.items.forEach(it=>L.push("- **"+it[0]+":** "+(it[1]?it[1].replace(/\n/g,"\n  "):"Not provided")));
+  const reportGroups=[
+    {title:"Scope and outcomes",steps:["Scope","Value and success"]},
+    {title:"People and ownership",steps:["People"]},
+    {title:"Technical and operational context",steps:["Requirements","Technical context"]},
+    {title:"Security and compliance",steps:["Security and compliance"]},
+    {title:"Timeline and delivery",steps:["Timeline and resources","Risks and rollout"]}
+  ];
+  reportGroups.forEach(g=>{
+    L.push("","## "+g.title,"");
+    m.sections.filter(s=>g.steps.includes(s.h)).forEach(s=>{
+      s.items.forEach(it=>L.push("- **"+it[0]+":** "+(it[1]||"Not provided")));
+    });
   });
   L.push("","## Open questions","");
-  if(m.open.length)m.open.forEach(o=>L.push("- "+o));else L.push("- None marked unknown");
+  if(m.open.length)m.open.forEach(o=>L.push("- "+o));else L.push("- None explicitly marked unknown.");
+  L.push("","## Complete intake record","");
+  m.sections.forEach(s=>{
+    L.push("### "+s.h,"");
+    s.items.forEach(it=>L.push("- **"+it[0]+":** "+(it[1]||"Not provided")));
+    L.push("");
+  });
+  L.push("---","","**Assessment limitation:** Findings are generated from the answers entered and transparent rule-based checks. They do not replace stakeholder review, technical discovery, security assessment, financial approval, or portfolio prioritization.");
   return L.join("\n")+"\n";
 }
 async function copyText(text,btn){
+  const originalLabel=btn.textContent;
   try{await navigator.clipboard.writeText(text);}
   catch(e){
     const t=el("textarea");t.value=text;document.body.append(t);t.select();
@@ -508,7 +595,7 @@ async function copyText(text,btn){
     t.remove();
   }
   btn.textContent="Copied";
-  setTimeout(()=>{btn.textContent="Copy as Markdown";},2000);
+  setTimeout(()=>{btn.textContent=originalLabel;},2000);
 }
 function download(m){
   const slug=m.title.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"request";
@@ -517,18 +604,108 @@ function download(m){
   document.body.append(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+function reportStat(label,value){
+  return el("div",{class:"report-stat"},
+    el("span",{class:"k",text:label}),
+    el("span",{class:"v",text:value})
+  );
+}
+function reportFieldList(items){
+  const dl=el("dl");
+  items.forEach(it=>{
+    dl.append(el("dt",{text:it[0]}),el("dd",{class:it[1]&&it[1]!=="Not provided"?"":"none",text:it[1]||"Not provided"}));
+  });
+  return dl;
+}
+function reportFindingSection(title,items,emptyText){
+  return el("section",{class:"report-section"},
+    el("h3",{text:title}),
+    items.length?el("ol",{class:"report-list"},items.map(x=>
+      el("li",{},x.text,el("button",{type:"button",class:"link fix",text:"Review answer",onclick:()=>go(x.f.stepIndex)})))):
+      el("p",{class:"report-empty",text:emptyText})
+  );
+}
 function renderSummary(){
   const m=buildModel();
-  const copyBtn=el("button",{type:"button",class:"btn",text:"Copy as Markdown"});
+  const copyBtn=el("button",{type:"button",class:"btn",text:"Copy executive report"});
   copyBtn.addEventListener("click",()=>copyText(toMarkdown(m),copyBtn));
-  function findingSection(title,items,emptyText){
-    return el("section",{},
-      el("h3",{text:title}),
-      items.length?el("ol",{class:"gaps"},items.map(x=>
-        el("li",{},x.text,el("button",{type:"button",class:"link fix",text:"Review",onclick:()=>go(x.f.stepIndex)})))):
-        el("p",{class:"hint",text:emptyText})
+  const report=el("article",{class:"doc"},
+    el("p",{class:"meta",text:"TPM INTAKE ASSESSMENT  •  PREPARED "+m.reportDate}),
+    el("h2",{text:m.title}),
+    el("p",{class:"report-intro",text:m.summary==="Not provided"?"Request summary not provided.":m.summary}),
+    el("div",{class:"report-note",text:"This report distinguishes requester-provided information from rule-based assessment findings and recommended follow-up. Ready for Triage does not mean the initiative is approved, funded, prioritized, or ready for execution."}),
+    el("section",{class:"report-panel"},
+      el("h3",{text:"Executive summary"}),
+      el("p",{text:m.executiveSummary}),
+      el("p",{text:"The request is currently assessed as "+m.status.toLowerCase()+". "+m.reason})
+    ),
+    el("section",{class:"report-section"},
+      el("h3",{text:"Decision snapshot"}),
+      el("div",{class:"report-grid"},
+        reportStat("Intake status",m.status),
+        reportStat("Requester",m.requester),
+        reportStat("Sponsor",m.sponsor),
+        reportStat("Target date",m.targetDate),
+        reportStat("Deadline type",m.deadlineType),
+        reportStat("Date submitted",m.submitted),
+        reportStat("Blockers",String(m.blockers.length)),
+        reportStat("Important gaps",String(m.gaps.length))
+      )
+    ),
+    el("section",{class:"report-section"},
+      el("h3",{text:"Business context"}),
+      reportFieldList(m.executiveFacts)
+    ),
+    el("section",{class:"report-section"},
+      el("h3",{text:"TPM assessment"}),
+      el("p",{class:"hint",text:"The findings below are generated by transparent checks against the information entered. They are prompts for review, not automated approval decisions."})
+    ),
+    reportFindingSection("Blockers",m.blockers,"No critical blockers identified by the current checks."),
+    reportFindingSection("Important gaps",m.gaps,"No important gaps identified by the current checks."),
+    reportFindingSection("Suggestions",m.suggestions,"No additional suggestions identified."),
+    el("section",{class:"report-section"},
+      el("h3",{text:"Decisions and clarifications required"}),
+      m.decisionItems.length?el("ol",{class:"report-list"},m.decisionItems.map(x=>el("li",{},el("strong",{text:x.type+": "}),x.text))):
+        el("p",{class:"report-empty",text:"No blockers or important gaps identified by the current checks. Stakeholder and portfolio review may still be required."})
+    ),
+    el("section",{class:"report-section"},
+      el("h3",{text:"Recommended next steps"}),
+      el("ol",{class:"report-list"},m.recommendations.map(x=>el("li",{text:x})))
+    )
+  );
+  const reportGroups=[
+    {title:"Scope and outcomes",steps:["Scope","Value and success"]},
+    {title:"People and ownership",steps:["People"]},
+    {title:"Technical and operational context",steps:["Requirements","Technical context"]},
+    {title:"Security and compliance",steps:["Security and compliance"]},
+    {title:"Timeline and delivery",steps:["Timeline and resources","Risks and rollout"]}
+  ];
+  reportGroups.forEach(g=>{
+    const relevant=m.sections.filter(s=>g.steps.includes(s.h));
+    const section=el("section",{class:"report-section"},
+      el("h3",{text:g.title}),
+      relevant.map(s=>el("div",{},
+        el("p",{class:"report-subhead",text:s.h}),
+        reportFieldList(s.items)
+      ))
     );
-  }
+    report.append(section);
+  });
+  report.append(
+    el("section",{class:"report-section"},
+      el("h3",{text:"Open questions"}),
+      m.open.length?el("ul",{class:"report-list"},m.open.map(o=>el("li",{text:o}))):
+        el("p",{class:"report-empty",text:"No fields were explicitly marked unknown."})
+    ),
+    el("section",{class:"report-section"},
+      el("h3",{text:"Complete intake record"}),
+      m.sections.map(s=>el("div",{},
+        el("p",{class:"report-subhead",text:s.h}),
+        reportFieldList(s.items)
+      ))
+    ),
+    el("p",{class:"report-note",text:"Assessment limitation: Findings are generated from the answers entered and transparent rule-based checks. They do not replace stakeholder review, technical discovery, security assessment, financial approval, or portfolio prioritization."})
+  );
   main.append(
     el("div",{class:"verdict "+m.cls},
       el("p",{class:"label",text:"Intake assessment"}),
@@ -537,32 +714,11 @@ function renderSummary(){
     ),
     el("div",{class:"toolbar"},
       copyBtn,
-      el("button",{type:"button",class:"btn secondary",text:"Download .md",onclick:()=>download(m)}),
+      el("button",{type:"button",class:"btn secondary",text:"Download report (.md)",onclick:()=>download(m)}),
       el("button",{type:"button",class:"btn secondary",text:"Edit answers",onclick:()=>go(0)}),
-      el("button",{type:"button",class:"btn secondary",text:"Print",onclick:()=>window.print()})
+      el("button",{type:"button",class:"btn secondary",text:"Print report",onclick:()=>window.print()})
     ),
-    findingSection("Blockers",m.blockers,"No critical blockers identified."),
-    findingSection("Important gaps",m.gaps,"No important gaps identified."),
-    findingSection("Suggestions",m.suggestions,"No additional suggestions."),
-    el("section",{},
-      el("h3",{text:"Recommended next steps"}),
-      el("ol",{class:"gaps"},m.recommendations.map(x=>el("li",{text:x})))
-    ),
-    el("article",{class:"doc"},
-      el("h2",{text:m.title}),
-      m.summary?el("p",{class:"lead",text:m.summary}):null,
-      m.sections.map(s=>el("section",{},
-        el("h3",{text:s.h}),
-        el("dl",{},s.items.map(it=>[
-          el("dt",{text:it[0]}),
-          el("dd",{class:it[1]?"":"none",text:it[1]||"Not provided"})
-        ]))
-      )),
-      el("section",{},
-        el("h3",{text:"Open questions"}),
-        m.open.length?el("ul",{},m.open.map(o=>el("li",{text:o}))):el("p",{text:"Nothing marked unknown."})
-      )
-    )
+    report
   );
 }
 
